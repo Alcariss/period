@@ -104,85 +104,6 @@ body {
     font-size: 1.1rem;
 }
 
-.progress-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    align-items: center;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 24px;
-    background: #f7fafc;
-    border-radius: 12px;
-    display: flex;
-    overflow: hidden;
-    border: 2px solid #e2e8f0;
-}
-
-.progress-segment {
-    height: 100%;
-    transition: width 0.6s ease;
-    position: relative;
-}
-
-.progress-segment.vyjasnit {
-    background: linear-gradient(45deg, #ed8936, #f6ad55);
-}
-
-.progress-segment.objednano {
-    background: linear-gradient(45deg, #3182ce, #63b3ed);
-}
-
-.progress-segment.zabaleno {
-    background: linear-gradient(45deg, #805ad5, #b794f6);
-}
-
-.progress-segment.hotovo {
-    background: linear-gradient(45deg, #38a169, #68d391);
-}
-
-.progress-legend {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    width: 100%;
-    max-width: 500px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    color: #4a5568;
-    justify-content: center;
-}
-
-.legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    flex-shrink: 0;
-}
-
-.legend-color.vyjasnit {
-    background: linear-gradient(45deg, #ed8936, #f6ad55);
-}
-
-.legend-color.objednano {
-    background: linear-gradient(45deg, #3182ce, #63b3ed);
-}
-
-.legend-color.zabaleno {
-    background: linear-gradient(45deg, #805ad5, #b794f6);
-}
-
-.legend-color.hotovo {
-    background: linear-gradient(45deg, #38a169, #68d391);
-}
-
 /* Actions */
 .actions {
     display: flex;
@@ -398,13 +319,6 @@ body {
     border: 1px solid #9ae6b4;
 }
 
-/* Gifts Grid */
-.gifts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
-}
-
 /* Entries Grid */
 .entries-grid {
     display: grid;
@@ -485,156 +399,6 @@ body {
     border: 1px solid #e2e8f0;
 }
 
-.gift-card {
-    background: white;
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border-left: 4px solid #e2e8f0;
-}
-
-.gift-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-}
-
-.gift-card.pending {
-    border-left-color: #ed8936;
-}
-
-.gift-card.bought {
-    border-left-color: #38a169;
-}
-
-.gift-card.wrapped {
-    border-left-color: #3182ce;
-}
-
-.gift-card.ordered {
-    border-left-color: #d69e2e;
-}
-
-.gift-card.given {
-    border-left-color: #805ad5;
-}
-
-.gift-header {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    margin-bottom: 16px;
-    gap: 8px;
-    width: 100%;
-}
-
-.gift-recipient {
-    font-weight: 600;
-    font-size: 1rem;
-    color: #2d3748;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.recipient-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100px;
-}
-
-.gift-from {
-    font-size: 0.8rem;
-    color: #718096;
-    font-weight: 400;
-    font-style: italic;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100px;
-    justify-self: start;
-}
-
-.gift-status-container {
-    width: 80px;
-    flex-shrink: 0;
-}
-
-.status-select {
-    width: 100%;
-    padding: 4px 6px !important;
-    border: 2px solid #e2e8f0 !important;
-    border-radius: 6px !important;
-    font-size: 0.7rem !important;
-    font-weight: 500 !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    outline: none !important;
-    background: white !important;
-    max-width: 80px;
-}
-
-.status-select:focus {
-    border-color: #667eea !important;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-}
-
-.status-select.status-pending {
-    background: #fed7ad !important;
-    color: #c05621 !important;
-    border-color: #ed8936 !important;
-}
-
-.status-select.status-ordered {
-    background: #bee3f8 !important;
-    color: #2c5282 !important;
-    border-color: #3182ce !important;
-}
-
-.status-select.status-wrapped {
-    background: #e9d8fd !important;
-    color: #553c9a !important;
-    border-color: #805ad5 !important;
-}
-
-.status-select.status-bought {
-    background: #c6f6d5 !important;
-    color: #276749 !important;
-    border-color: #38a169 !important;
-}
-
-.gift-item {
-    font-size: 1.1rem;
-    color: #4a5568;
-    margin-bottom: 16px;
-    font-weight: 500;
-}
-
-.gift-link {
-    margin-bottom: 16px;
-}
-
-.gift-link a {
-    color: #667eea;
-    text-decoration: none;
-    font-size: 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.gift-link a:hover {
-    text-decoration: underline;
-}
-
-.gift-actions {
-    margin-top: 16px;
-}
-
 /* Empty state */
 .empty-state {
     grid-column: 1 / -1;
@@ -674,7 +438,7 @@ body {
         grid-template-columns: 1fr;
     }
     
-    .gifts-grid {
+    .entries-grid {
         grid-template-columns: 1fr;
     }
     
@@ -694,12 +458,7 @@ body {
     .form-actions {
         flex-direction: column;
     }
-    
-    .gift-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
+}
 }
 
 @media (max-width: 480px) {
@@ -715,18 +474,12 @@ body {
         font-size: 1.1rem;
     }
     
-    .progress-legend {
-        grid-template-columns: 1fr;
-        gap: 12px;
-        text-align: left;
-    }
-    
     .legend-item {
         justify-content: flex-start;
         font-size: 0.85rem;
     }
     
-    .gift-card {
+    .entry-card {
         padding: 16px;
     }
     
