@@ -1,5 +1,5 @@
 // Configuration - Update this with your Google Apps Script URL for period tracking
-const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxEuCTXoMCBqjQ3kZPx9fVINAYRJaOC-eVOAMvDt1XF9-vCcwWPshSeDpMhpfQSIM9zEw/exec'
 
 // DOM Elements
 const entriesContainer = document.getElementById('entries-container');
