@@ -1,0 +1,70 @@
+{
+  "name": "Period Tracker",
+  "short_name": "Periods",
+  "version": "1.0.0",
+  "description": "Track your menstrual cycle symptoms with ease",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e91e63",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-16.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-29.png",
+      "sizes": "29x29",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-40.png",
+      "sizes": "40x40",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-60.png",
+      "sizes": "60x60",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-76.png",
+      "sizes": "76x76",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-120.png",
+      "sizes": "120x120",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-167.png",
+      "sizes": "167x167",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["health", "lifestyle"],
+  "lang": "en-US"
+}

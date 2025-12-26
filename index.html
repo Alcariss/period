@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Period Tracker</title>
+    <meta name="description" content="Track your menstrual cycle symptoms with ease">
+    <meta name="theme-color" content="#e91e63">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="icon-60.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="icon-76.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icon-167.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+    <link rel="stylesheet" href="style.css?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🌸 Period Tracker</h1>
+            <p class="subtitle">Track your menstrual cycle symptoms with ease</p>
+            <div class="version-info" id="version-info" onclick="forceUpdate()" title="Click to update app">
+                Version: <span id="app-version">1.0.0</span>
+            </div>
+        </header>
+
+        <div class="dashboard-card">
+            <div class="dashboard-header">
+                <h3>Symptom Entries</h3>
+                <div class="total-info">
+                    Total: <span id="total-entries">0</span> entries
+                </div>
+            </div>
+            <div class="stats-info">
+                <p>Track your symptoms daily to better understand your cycle</p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-secondary" onclick="loadEntries()">
+                <span class="btn-icon">🔄</span>
+                Refresh
+            </button>
+            <button class="btn btn-primary" onclick="toggleAddForm()">
+                <span class="btn-icon">+</span>
+                Add Entry
+            </button>
+        </div>
+
+        <!-- Add Entry Form -->
+        <div id="add-form" class="form-container" style="display: none;">
+            <h3>Add Symptom Entry</h3>
+            <form onsubmit="addEntry(event)">
+                <div class="form-group">
+                    <label for="date">Date:</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="symptoms">Symptoms:</label>
+                    <textarea id="symptoms" name="symptoms" placeholder="Describe your symptoms, mood, or any notes..." rows="4" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Add Entry</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="error" style="display: none;"></div>
+
+        <!-- Success Message -->
+        <div id="success" class="success" style="display: none;"></div>
+
+        <!-- Entries Grid -->
+        <div id="entries-container" class="entries-grid">
+            <!-- Symptom entries will be populated here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
