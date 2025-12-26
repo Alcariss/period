@@ -108,6 +108,69 @@ function doGet(e) {
           });
       }
         
+    } else if (action === 'delete') {
+      // Delete period entry
+      const date = e.parameter.date;
+      
+      if (!date) {
+        const errorMsg = 'ERROR: Missing required parameter (date)';
+        console.error(errorMsg);
+        return ContentService
+          .createTextOutput(errorMsg)
+          .setMimeType(ContentService.MimeType.TEXT)
+          .setHeaders({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+          });
+      }
+      
+      const spreadsheetId = '1nnf4THz2ecMmZUn0eE6eAjBKHZWCIvV1ua5o7LqKIRI';
+      const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+      const sheet = spreadsheet.getSheets()[0];
+      
+      // Find the row to delete
+      const lastRow = sheet.getLastRow();
+      let foundRow = -1;
+      
+      if (lastRow > 1) {
+        const data = sheet.getRange(2, 1, lastRow - 1, 2).getValues(); // Skip header row
+        
+        // Look for the row with matching date
+        for (let i = 0; i < data.length; i++) {
+          if (data[i][0] && data[i][0].toString() === date) {
+            foundRow = i + 2; // +2 because we skipped header row and array is 0-indexed
+            break;
+          }
+        }
+      }
+      
+      if (foundRow > 0) {
+        // Delete the row
+        sheet.deleteRow(foundRow);
+        console.log('Successfully deleted row', foundRow, 'for date:', date);
+        
+        return ContentService
+          .createTextOutput('SUCCESS: Period entry deleted from row ' + foundRow)
+          .setMimeType(ContentService.MimeType.TEXT)
+          .setHeaders({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+          });
+      } else {
+        const errorMsg = 'ERROR: Entry with date ' + date + ' not found';
+        console.error(errorMsg);
+        return ContentService
+          .createTextOutput(errorMsg)
+          .setMimeType(ContentService.MimeType.TEXT)
+          .setHeaders({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+          });
+      }
+        
     } else {
       // Unknown action
       const errorMsg = 'ERROR: Unknown action parameter';
