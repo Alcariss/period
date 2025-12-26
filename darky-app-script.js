@@ -4,7 +4,7 @@ function doGet(e) {
     
     if (action === 'fetch') {
       // Fetch quotes from spreadsheet
-      const spreadsheetId = '17t-3sEqlnF9o6aklvfv4yfZJJOJA0ZzwPFf-ezSQwXI';
+      const spreadsheetId = '1nnf4THz2ecMmZUn0eE6eAjBKHZWCIvV1ua5o7LqKIRI';
       const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
       const sheet = spreadsheet.getSheets()[0];
       
@@ -68,7 +68,7 @@ function doGet(e) {
           });
       }
       
-      const spreadsheetId = '17t-3sEqlnF9o6aklvfv4yfZJJOJA0ZzwPFf-ezSQwXI';
+      const spreadsheetId = '1nnf4THz2ecMmZUn0eE6eAjBKHZWCIvV1ua5o7LqKIRI';
       const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
       const sheet = spreadsheet.getSheets()[0];
       
@@ -135,7 +135,7 @@ function doGet(e) {
           });
       }
       
-      const spreadsheetId = '17t-3sEqlnF9o6aklvfv4yfZJJOJA0ZzwPFf-ezSQwXI';
+      const spreadsheetId = '1nnf4THz2ecMmZUn0eE6eAjBKHZWCIvV1ua5o7LqKIRI';
       const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
       const sheet = spreadsheet.getSheets()[0];
       
