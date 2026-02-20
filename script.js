@@ -345,6 +345,9 @@ function calculatePeriodPrediction() {
     }
 
     // Group consecutive bleeding days into periods
+    // Use 7-day tolerance to account for gaps in data entry
+    // (typical period is 3-7 days, user may not log every day)
+    const SAME_PERIOD_MAX_GAP = 7;
     const periods = [];
     let currentPeriod = [bleedingEntries[0]];
     
@@ -353,7 +356,7 @@ function calculatePeriodPrediction() {
         const previousDate = new Date(bleedingEntries[i-1].date);
         const dayDifference = (currentDate - previousDate) / (1000 * 60 * 60 * 24);
         
-        if (dayDifference <= 2) { // Same period if within 2 days
+        if (dayDifference <= SAME_PERIOD_MAX_GAP) { // Same period if within 7 days
             currentPeriod.push(bleedingEntries[i]);
         } else {
             periods.push(currentPeriod);

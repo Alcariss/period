@@ -119,7 +119,7 @@ function testPeriodPrediction() {
     
     const originalEntries = [...entries];
     let passed = 0;
-    const total = 6;
+    const total = 9;
 
     // Test 1: No entries
     entries = [];
@@ -200,6 +200,55 @@ function testPeriodPrediction() {
         passed++;
     } else {
         console.log('❌ Test 6: Should handle out-of-order entries');
+    }
+
+    // Test 7: Gap within same period (bleeding Jan 1 and Jan 5 = 4 day gap = same period)
+    // User didn't log every day, but it's still the same period
+    entries = [
+        { date: '2024-01-01', krvaceni: '3' },  // Period 1 start
+        { date: '2024-01-05', krvaceni: '2' },  // 4-day gap, still Period 1
+        { date: '2024-01-29', krvaceni: '3' },  // Period 2 start (28 days from Jan 1)
+        { date: '2024-02-02', krvaceni: '1' }   // 4-day gap, still Period 2
+    ];
+    calculatePeriodPrediction();
+    // Should find 2 periods with 28-day cycle (not 4 periods)
+    if (predictionDetailsElement.innerHTML.includes('2 periods')) {
+        console.log('✅ Test 7: Groups bleeding with gaps as same period (4-day gap)');
+        passed++;
+    } else {
+        console.log('❌ Test 7: Should group bleeding entries with small gaps as same period');
+        console.log('   Got:', predictionDetailsElement.innerHTML);
+    }
+
+    // Test 8: Gap too large = separate periods (10-day gap)
+    entries = [
+        { date: '2024-01-01', krvaceni: '3' },  // Period 1
+        { date: '2024-01-11', krvaceni: '3' },  // 10-day gap = Period 2 (too far)
+        { date: '2024-02-08', krvaceni: '3' }   // Period 3
+    ];
+    calculatePeriodPrediction();
+    // Should find 3 periods (gaps too large)
+    if (predictionDetailsElement.innerHTML.includes('3 periods')) {
+        console.log('✅ Test 8: Separates periods with large gaps (10+ days)');
+        passed++;
+    } else {
+        console.log('❌ Test 8: Should separate periods with 10+ day gaps');
+        console.log('   Got:', predictionDetailsElement.innerHTML);
+    }
+
+    // Test 9: Max gap boundary test (7-day gap = same period, 8-day gap = separate)
+    entries = [
+        { date: '2024-01-01', krvaceni: '3' },  // Period 1 start
+        { date: '2024-01-08', krvaceni: '2' },  // 7-day gap = still Period 1
+        { date: '2024-01-29', krvaceni: '3' }   // Period 2 start
+    ];
+    calculatePeriodPrediction();
+    if (predictionDetailsElement.innerHTML.includes('2 periods')) {
+        console.log('✅ Test 9: 7-day gap is within same period tolerance');
+        passed++;
+    } else {
+        console.log('❌ Test 9: 7-day gap should be same period');
+        console.log('   Got:', predictionDetailsElement.innerHTML);
     }
 
     // Restore
