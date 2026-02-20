@@ -694,17 +694,42 @@ function stopAutoRefresh() {
 }
 
 // Force update app
-function forceUpdate() {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        console.log('Forcing app update...');
-        navigator.serviceWorker.controller.postMessage({ action: 'skipWaiting' });
+async function forceUpdate() {
+    console.log('Forcing app update...');
+    showSuccessMessage('Checking for updates...');
+    
+    try {
+        // 1. Force service worker to check for updates
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+                await registration.update();
+                console.log('Service worker update check completed');
+                
+                // If there's a waiting worker, activate it
+                if (registration.waiting) {
+                    registration.waiting.postMessage({ action: 'skipWaiting' });
+                }
+            }
+        }
+        
+        // 2. Clear all caches
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+            console.log('Caches cleared');
+        }
+        
+        // 3. Reload from network
         showSuccessMessage('App updated! Reloading...');
         setTimeout(() => {
-            window.location.reload();
+            window.location.reload(true);
         }, 1000);
-    } else {
-        console.log('No service worker available for update');
-        window.location.reload();
+        
+    } catch (error) {
+        console.error('Update failed:', error);
+        // Fallback: just reload
+        window.location.reload(true);
     }
 }
 
