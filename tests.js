@@ -1,11 +1,14 @@
 /**
  * Test Suite for Period Tracker App
- * Run in browser console or use: node --experimental-vm-modules tests.js
  * 
- * For browser testing:
+ * Usage:
+ *   1. Open test.html in a browser
+ *   2. Click "Run All Tests" button
+ * 
+ * Or run in browser console:
  *   1. Open the app in browser
  *   2. Open DevTools console
- *   3. Copy/paste the runAllTests() function or load this file
+ *   3. Load tests.js and call runAllTests()
  */
 
 // ============================================
@@ -455,11 +458,6 @@ function testFormatDateToISO() {
 }
 `;
 
-// Log server tests for copy/paste
-console.log('\n=== SERVER-SIDE TESTS ===');
-console.log('Copy this to Google Apps Script:\n');
-console.log(serverTests_formatDateToISO);
-
 // Export for Node.js testing (if needed)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -469,6 +467,7 @@ if (typeof module !== 'undefined' && module.exports) {
         testPeriodPrediction,
         testDateValidation,
         testDuplicateDetection,
-        testSymptomValues
+        testSymptomValues,
+        serverTests_formatDateToISO
     };
 }

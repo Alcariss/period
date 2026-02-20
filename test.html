@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Period Tracker - Test Suite</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --text-color: #eee;
+            --success-color: #4caf50;
+            --error-color: #f44336;
+            --border-color: #0f3460;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0 30px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+        
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            color: #aaa;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #e91e63, #c2185b);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+        
+        .results-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .results-header h2 {
+            font-size: 1.3rem;
+        }
+        
+        .summary {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .summary-passed {
+            color: var(--success-color);
+        }
+        
+        .summary-failed {
+            color: var(--error-color);
+        }
+        
+        .test-suite {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        
+        .test-suite-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        
+        .test-suite-header:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .test-suite-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-suite-status {
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+        
+        .status-passed {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success-color);
+        }
+        
+        .status-failed {
+            background: rgba(244, 67, 54, 0.2);
+            color: var(--error-color);
+        }
+        
+        .test-suite-details {
+            display: none;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .test-suite.expanded .test-suite-details {
+            display: block;
+        }
+        
+        .test-case {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+        
+        .test-case:last-child {
+            border-bottom: none;
+        }
+        
+        .test-case.passed {
+            color: var(--success-color);
+        }
+        
+        .test-case.failed {
+            color: var(--error-color);
+        }
+        
+        .test-case-error {
+            margin-top: 5px;
+            padding: 10px;
+            background: rgba(244, 67, 54, 0.1);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .console-output {
+            background: #0d0d0d;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .console-output pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .log-entry {
+            padding: 2px 0;
+        }
+        
+        .log-pass {
+            color: var(--success-color);
+        }
+        
+        .log-fail {
+            color: var(--error-color);
+        }
+        
+        .log-info {
+            color: #64b5f6;
+        }
+        
+        .log-warn {
+            color: #ffb74d;
+        }
+        
+        /* Hidden elements needed by script.js */
+        #mock-elements {
+            display: none;
+        }
+        
+        .no-results {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #e91e63;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .running {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧪 Period Tracker Test Suite</h1>
+            <p>Client-side unit tests for the Period Tracker application</p>
+        </header>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="runTests()">▶️ Run All Tests</button>
+            <button class="btn btn-secondary" onclick="clearResults()">🗑️ Clear Results</button>
+        </div>
+        
+        <div class="results-container">
+            <div class="results-header">
+                <h2>Test Results</h2>
+                <div class="summary" id="summary" style="display: none;">
+                    <div class="summary-item summary-passed">
+                        <span>✅</span>
+                        <span id="passed-count">0</span> passed
+                    </div>
+                    <div class="summary-item summary-failed">
+                        <span>❌</span>
+                        <span id="failed-count">0</span> failed
+                    </div>
+                </div>
+            </div>
+            
+            <div id="test-results">
+                <div class="no-results">Click "Run All Tests" to execute the test suite</div>
+            </div>
+        </div>
+        
+        <div class="results-container">
+            <h2>Console Output</h2>
+            <div class="console-output" id="console-output">
+                <pre id="console-log"></pre>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mock DOM elements required by script.js -->
+    <div id="mock-elements">
+        <div id="entries-container"></div>
+        <div id="loading"></div>
+        <div id="error"></div>
+        <div id="success"></div>
+        <div id="add-form"></div>
+        <div id="prediction-info"></div>
+        <div id="prediction-details"></div>
+        <div id="version-info">
+            <span id="app-version">1.0.0</span>
+        </div>
+        <input type="date" id="date">
+    </div>
+    
+    <!-- Load main app script (contains functions to test) -->
+    <script src="script.js"></script>
+    
+    <script>
+        // Test runner UI
+        const testResults = [];
+        const consoleLog = document.getElementById('console-log');
+        
+        // Override console methods to capture output
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn
+        };
+        
+        function captureConsole() {
+            consoleLog.innerHTML = '';
+            
+            console.log = function(...args) {
+                originalConsole.log.apply(console, args);
+                const message = args.map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                ).join(' ');
+                
+                let className = 'log-entry';
+                if (message.includes('✅')) className += ' log-pass';
+                else if (message.includes('❌')) className += ' log-fail';
+                else if (message.includes('===')) className += ' log-info';
+                
+                consoleLog.innerHTML += `<div class="${className}">${escapeHtmlForLog(message)}</div>`;
+                consoleLog.parentElement.scrollTop = consoleLog.parentElement.scrollHeight;
+            };
+            
+            console.error = function(...args) {
+                originalConsole.error.apply(console, args);
+                const message = args.map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                ).join(' ');
+                consoleLog.innerHTML += `<div class="log-entry log-fail">ERROR: ${escapeHtmlForLog(message)}</div>`;
+            };
+            
+            console.warn = function(...args) {
+                originalConsole.warn.apply(console, args);
+                const message = args.map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                ).join(' ');
+                consoleLog.innerHTML += `<div class="log-entry log-warn">WARN: ${escapeHtmlForLog(message)}</div>`;
+            };
+        }
+        
+        function restoreConsole() {
+            console.log = originalConsole.log;
+            console.error = originalConsole.error;
+            console.warn = originalConsole.warn;
+        }
+        
+        function escapeHtmlForLog(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function runTests() {
+            const resultsContainer = document.getElementById('test-results');
+            resultsContainer.innerHTML = '<div class="running"><span class="spinner"></span>Running tests...</div>';
+            
+            captureConsole();
+            
+            // Run tests after a short delay to allow UI update
+            setTimeout(() => {
+                try {
+                    const allPassed = runAllTests();
+                    displayResults();
+                } catch (error) {
+                    console.error('Test execution error:', error);
+                    resultsContainer.innerHTML = `<div class="test-case failed">Test execution failed: ${error.message}</div>`;
+                }
+                restoreConsole();
+            }, 100);
+        }
+        
+        function displayResults() {
+            const resultsContainer = document.getElementById('test-results');
+            const summary = document.getElementById('summary');
+            
+            // Parse console output to extract results
+            const suites = parseTestResults();
+            
+            if (suites.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">No test results found</div>';
+                return;
+            }
+            
+            let totalPassed = 0;
+            let totalFailed = 0;
+            
+            let html = '';
+            suites.forEach(suite => {
+                const suitePassed = suite.passed === suite.total;
+                totalPassed += suite.passed;
+                totalFailed += suite.total - suite.passed;
+                
+                html += `
+                    <div class="test-suite" onclick="toggleSuite(this)">
+                        <div class="test-suite-header">
+                            <span class="test-suite-name">
+                                ${suitePassed ? '✅' : '❌'} ${suite.name}
+                            </span>
+                            <span class="test-suite-status ${suitePassed ? 'status-passed' : 'status-failed'}">
+                                ${suite.passed}/${suite.total}
+                            </span>
+                        </div>
+                        <div class="test-suite-details">
+                            ${suite.tests.map(test => `
+                                <div class="test-case ${test.passed ? 'passed' : 'failed'}">
+                                    ${test.passed ? '✅' : '❌'} ${test.name}
+                                    ${test.error ? `<div class="test-case-error">${escapeHtmlForLog(test.error)}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsContainer.innerHTML = html;
+            
+            document.getElementById('passed-count').textContent = totalPassed;
+            document.getElementById('failed-count').textContent = totalFailed;
+            summary.style.display = 'flex';
+        }
+        
+        function parseTestResults() {
+            const logText = consoleLog.innerText;
+            const suites = [];
+            
+            // Parse suite results from console output
+            const suiteMatches = logText.matchAll(/=== Testing (\w+)(?: edge cases)? ===([\s\S]*?)(\w+): (\d+)\/(\d+) tests passed/g);
+            
+            for (const match of suiteMatches) {
+                const suiteName = match[1];
+                const content = match[2];
+                const passed = parseInt(match[4]);
+                const total = parseInt(match[5]);
+                
+                // Extract individual test results
+                const tests = [];
+                const testMatches = content.matchAll(/(✅|❌) Test (\d+): (.*?)(?=\n|$)/g);
+                
+                for (const testMatch of testMatches) {
+                    const testPassed = testMatch[1] === '✅';
+                    const testName = testMatch[3].trim();
+                    
+                    // Look for error details if failed
+                    let error = '';
+                    if (!testPassed) {
+                        const errorMatch = content.match(new RegExp(`❌ Test ${testMatch[2]}:[\\s\\S]*?(Expected:.*?Got:.*?)(?=\\n\\s*[✅❌]|$)`));
+                        if (errorMatch) {
+                            error = errorMatch[1].trim();
+                        }
+                    }
+                    
+                    tests.push({ name: testName, passed: testPassed, error });
+                }
+                
+                suites.push({ name: suiteName, tests, passed, total });
+            }
+            
+            return suites;
+        }
+        
+        function toggleSuite(element) {
+            element.classList.toggle('expanded');
+        }
+        
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '<div class="no-results">Click "Run All Tests" to execute the test suite</div>';
+            document.getElementById('console-log').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+        }
+    </script>
+    
+    <!-- Load tests -->
+    <script src="tests.js"></script>
+</body>
+</html>
