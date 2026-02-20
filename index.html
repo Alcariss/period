@@ -29,13 +29,13 @@
 
         <div class="dashboard-card">
             <div class="dashboard-header">
-                <h3>Symptom Entries</h3>
-                <div class="total-info">
-                    Total: <span id="total-entries">0</span> entries
+                <h3>Period Prediction</h3>
+                <div class="prediction-info" id="prediction-info">
+                    Loading prediction...
                 </div>
             </div>
-            <div class="stats-info">
-                <p>Track your symptoms daily to better understand your cycle</p>
+            <div class="stats-info" id="prediction-details">
+                <p>Analyzing your cycle data to predict next period</p>
             </div>
         </div>
 
@@ -58,10 +58,110 @@
                     <label for="date">Date:</label>
                     <input type="date" id="date" name="date" required>
                 </div>
-                <div class="form-group">
-                    <label for="symptoms">Symptoms:</label>
-                    <textarea id="symptoms" name="symptoms" placeholder="Describe your symptoms, mood, or any notes..." rows="4" required></textarea>
+                
+                <!-- Symptom tracking with intensity levels -->
+                <div class="symptoms-container">
+                    <h4>Track Symptoms</h4>
+                    <p class="rating-legend">Bleeding: 0-5 scale | Other symptoms: 1 = Mild, 2 = Moderate, 3 = Severe</p>
+                    
+                    <div class="symptom-group">
+                        <label class="symptom-label">🩸 Krvácení (Bleeding):</label>
+                        <div class="intensity-buttons">
+                            <input type="radio" id="krvaceni-0" name="krvaceni" value="0" checked>
+                            <label for="krvaceni-0" class="intensity-btn none">None</label>
+                            
+                            <input type="radio" id="krvaceni-1" name="krvaceni" value="1">
+                            <label for="krvaceni-1" class="intensity-btn spotting">Spotting</label>
+                            
+                            <input type="radio" id="krvaceni-2" name="krvaceni" value="2">
+                            <label for="krvaceni-2" class="intensity-btn light">Light</label>
+                            
+                            <input type="radio" id="krvaceni-3" name="krvaceni" value="3">
+                            <label for="krvaceni-3" class="intensity-btn moderate">Moderate</label>
+                            
+                            <input type="radio" id="krvaceni-4" name="krvaceni" value="4">
+                            <label for="krvaceni-4" class="intensity-btn heavy">Heavy</label>
+                            
+                            <input type="radio" id="krvaceni-5" name="krvaceni" value="5">
+                            <label for="krvaceni-5" class="intensity-btn very-heavy">Very Heavy</label>
+                        </div>
+                    </div>
+
+                    <div class="symptom-group">
+                        <label class="symptom-label">🌙 Nálady (Mood):</label>
+                        <div class="intensity-buttons">
+                            <input type="radio" id="nalady-0" name="nalady" value="0" checked>
+                            <label for="nalady-0" class="intensity-btn none">None</label>
+                            
+                            <input type="radio" id="nalady-1" name="nalady" value="1">
+                            <label for="nalady-1" class="intensity-btn mild">1</label>
+                            
+                            <input type="radio" id="nalady-2" name="nalady" value="2">
+                            <label for="nalady-2" class="intensity-btn moderate">2</label>
+                            
+                            <input type="radio" id="nalady-3" name="nalady" value="3">
+                            <label for="nalady-3" class="intensity-btn severe">3</label>
+                        </div>
+                    </div>
+
+                    <div class="symptom-group">
+                        <label class="symptom-label">💢 Tlak v břiše (Abdominal pressure):</label>
+                        <div class="intensity-buttons">
+                            <input type="radio" id="tlak-0" name="tlak" value="0" checked>
+                            <label for="tlak-0" class="intensity-btn none">None</label>
+                            
+                            <input type="radio" id="tlak-1" name="tlak" value="1">
+                            <label for="tlak-1" class="intensity-btn mild">1</label>
+                            
+                            <input type="radio" id="tlak-2" name="tlak" value="2">
+                            <label for="tlak-2" class="intensity-btn moderate">2</label>
+                            
+                            <input type="radio" id="tlak-3" name="tlak" value="3">
+                            <label for="tlak-3" class="intensity-btn severe">3</label>
+                        </div>
+                    </div>
+
+                    <div class="symptom-group">
+                        <label class="symptom-label">🎈 Nadýmání (Bloating):</label>
+                        <div class="intensity-buttons">
+                            <input type="radio" id="nadymani-0" name="nadymani" value="0" checked>
+                            <label for="nadymani-0" class="intensity-btn none">None</label>
+                            
+                            <input type="radio" id="nadymani-1" name="nadymani" value="1">
+                            <label for="nadymani-1" class="intensity-btn mild">1</label>
+                            
+                            <input type="radio" id="nadymani-2" name="nadymani" value="2">
+                            <label for="nadymani-2" class="intensity-btn moderate">2</label>
+                            
+                            <input type="radio" id="nadymani-3" name="nadymani" value="3">
+                            <label for="nadymani-3" class="intensity-btn severe">3</label>
+                        </div>
+                    </div>
+
+                    <div class="symptom-group">
+                        <label class="symptom-label">⚡ Energie (Energy level):</label>
+                        <div class="intensity-buttons">
+                            <input type="radio" id="energie-0" name="energie" value="0" checked>
+                            <label for="energie-0" class="intensity-btn none">Normal</label>
+                            
+                            <input type="radio" id="energie-1" name="energie" value="1">
+                            <label for="energie-1" class="intensity-btn mild">Low</label>
+                            
+                            <input type="radio" id="energie-2" name="energie" value="2">
+                            <label for="energie-2" class="intensity-btn moderate">Very Low</label>
+                            
+                            <input type="radio" id="energie-3" name="energie" value="3">
+                            <label for="energie-3" class="intensity-btn severe">Exhausted</label>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- Notes section -->
+                <div class="form-group">
+                    <label for="notes">Notes (optional):</label>
+                    <textarea id="notes" name="notes" placeholder="Any additional notes, symptoms, or observations..." rows="3"></textarea>
+                </div>
+                
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Add Entry</button>
                     <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Cancel</button>
@@ -88,5 +188,6 @@
     </div>
 
     <script src="script.js"></script>
+    <script src="tests.js"></script>
 </body>
 </html>

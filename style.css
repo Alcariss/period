@@ -98,10 +98,36 @@ body {
     font-weight: 500;
 }
 
-.total-info span {
+.prediction-info {
+    font-size: 1rem;
+    color: #718096;
+    font-weight: 500;
+    text-align: center;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.prediction-info span {
     color: #667eea;
     font-weight: 600;
     font-size: 1.1rem;
+}
+
+#prediction-details {
+    text-align: left;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+#prediction-details p {
+    margin: 4px 0;
+}
+
+#prediction-details strong {
+    color: #4a5568;
 }
 
 /* Actions */
@@ -276,6 +302,182 @@ body {
     margin-top: 24px;
 }
 
+/* Symptoms tracking */
+.symptoms-container {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.symptoms-container h4 {
+    color: #2d3748;
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.rating-legend {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.symptom-group {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.symptom-group:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.symptom-label {
+    display: block;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 12px;
+    font-size: 1rem;
+}
+
+.intensity-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.intensity-buttons input[type="radio"] {
+    display: none;
+}
+
+.intensity-btn {
+    padding: 10px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    min-width: 60px;
+    text-align: center;
+    user-select: none;
+}
+
+.intensity-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.intensity-btn.none {
+    background: #f7fafc;
+    color: #718096;
+    border-color: #e2e8f0;
+}
+
+.intensity-btn.spotting {
+    background: #fef7f7;
+    color: #d53f8c;
+    border-color: #fbb6ce;
+}
+
+.intensity-btn.light {
+    background: #fed7d7;
+    color: #c53030;
+    border-color: #feb2b2;
+}
+
+.intensity-btn.mild {
+    background: #e6fffa;
+    color: #38a169;
+    border-color: #9ae6b4;
+}
+
+.intensity-btn.moderate {
+    background: #fff5e6;
+    color: #d69e2e;
+    border-color: #fbd38d;
+}
+
+.intensity-btn.heavy {
+    background: #e79f9f;
+    color: #742a2a;
+    border-color: #e79f9f;
+}
+
+.intensity-btn.very-heavy {
+    background: #9b2c2c;
+    color: white;
+    border-color: #9b2c2c;
+}
+
+.intensity-btn.severe {
+    background: #fed7d7;
+    color: #e53e3e;
+    border-color: #feb2b2;
+}
+
+/* Selected states */
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.none {
+    background: #edf2f7;
+    border-color: #a0aec0;
+    color: #4a5568;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.spotting {
+    background: #d53f8c;
+    border-color: #d53f8c;
+    color: white;
+    box-shadow: 0 2px 8px rgba(213, 63, 140, 0.3);
+}
+
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.light {
+    background: #e53e3e;
+    border-color: #e53e3e;
+    color: white;
+    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+}
+
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.mild {
+    background: #38a169;
+    border-color: #38a169;
+    color: white;
+    box-shadow: 0 2px 8px rgba(56, 161, 105, 0.3);
+}
+
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.moderate {
+    background: #d69e2e;
+    border-color: #d69e2e;
+    color: white;
+    box-shadow: 0 2px 8px rgba(214, 158, 46, 0.3);
+}
+
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.heavy {
+    background: #742a2a;
+    border-color: #742a2a;
+    color: white;
+    box-shadow: 0 2px 8px rgba(116, 42, 42, 0.3);
+}
+
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.very-heavy {
+    background: #4a1212;
+    border-color: #4a1212;
+    color: white;
+    box-shadow: 0 2px 8px rgba(74, 18, 18, 0.4);
+}
+
+.intensity-buttons input[type="radio"]:checked + .intensity-btn.severe {
+    background: #e53e3e;
+    border-color: #e53e3e;
+    color: white;
+    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+}
+
 /* Loading */
 .loading {
     display: flex;
@@ -391,13 +593,356 @@ body {
     transform: scale(1.05);
 }
 
+.btn-edit {
+    color: #667eea;
+    background: #e6f3ff;
+}
+
+.btn-edit:hover {
+    background: #cce7ff;
+    transform: scale(1.05);
+}
+
+.btn-save {
+    color: #38a169;
+    background: #def7dd;
+}
+
+.btn-save:hover {
+    background: #bed7be;
+    transform: scale(1.05);
+}
+
 .entry-symptoms {
     background: rgba(255, 255, 255, 0.3);
-    padding: 8px 12px;
-    border-radius: 4px;
+    padding: 12px 16px;
+    border-radius: 8px;
     color: #2d3748;
     line-height: 1.4;
     font-size: 0.95rem;
+}
+
+.symptom-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 6px 0;
+}
+
+.symptom-item:last-child {
+    margin-bottom: 0;
+}
+
+.symptom-name {
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.symptom-intensity {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 60px;
+}
+
+.symptom-intensity.none {
+    background: #f7fafc;
+    color: #718096;
+}
+
+.symptom-intensity.spotting {
+    background: #fbb6ce;
+    color: #97266d;
+}
+
+.symptom-intensity.light {
+    background: #fed7d7;
+    color: #c53030;
+}
+
+.symptom-intensity.mild {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.symptom-intensity.moderate {
+    background: #faf089;
+    color: #744210;
+}
+
+.symptom-intensity.heavy {
+    background: #e79f9f;
+    color: #742a2a;
+}
+
+.symptom-intensity.very-heavy {
+    background: #9b2c2c;
+    color: white;
+}
+
+.symptom-intensity.severe {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+/* Entry notes */
+.entry-notes {
+    background: rgba(102, 126, 234, 0.05);
+    border-left: 3px solid #667eea;
+    padding: 12px 16px;
+    margin-top: 12px;
+    border-radius: 0 8px 8px 0;
+}
+
+.notes-label {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+}
+
+.notes-content {
+    color: #4a5568;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Inline editing styles */
+.entry-symptoms-editable {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.symptom-item-editable {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.symptom-item-editable:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.symptom-item-editable .symptom-name {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.intensity-buttons-small {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.intensity-buttons-small input[type="radio"] {
+    display: none;
+}
+
+.intensity-btn-small {
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    min-width: 55px;
+    text-align: center;
+    user-select: none;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.intensity-btn-small:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    border-width: 2px;
+}
+
+/* Small button colors - Enhanced visibility */
+.intensity-btn-small.none {
+    background: #f7fafc;
+    color: #4a5568;
+    border-color: #cbd5e0;
+}
+
+.intensity-btn-small.spotting {
+    background: #fef5f5;
+    color: #c53030;
+    border-color: #feb2b2;
+}
+
+.intensity-btn-small.light {
+    background: #fed7d7;
+    color: #9b2c2c;
+    border-color: #fc8181;
+}
+
+.intensity-btn-small.mild {
+    background: #f0fff4;
+    color: #276749;
+    border-color: #9ae6b4;
+}
+
+.intensity-btn-small.moderate {
+    background: #fffbeb;
+    color: #92400e;
+    border-color: #fbbf24;
+}
+
+.intensity-btn-small.heavy {
+    background: #fecaca;
+    color: #7f1d1d;
+    border-color: #f87171;
+}
+
+.intensity-btn-small.very-heavy {
+    background: #fca5a5;
+    color: #7f1d1d;
+    border-color: #f87171;
+}
+
+.intensity-btn-small.severe {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+}
+
+/* Selected states for small buttons - ENHANCED VISIBILITY */
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.none {
+    background: #2d3748;
+    border-color: #2d3748;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.2), 0 4px 12px rgba(0,0,0,0.15);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.spotting {
+    background: #e53e3e;
+    border-color: #c53030;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.3), 0 4px 12px rgba(229, 62, 62, 0.2);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.light {
+    background: #dc2626;
+    border-color: #b91c1c;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3), 0 4px 12px rgba(220, 38, 38, 0.2);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.mild {
+    background: #059669;
+    border-color: #047857;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.3), 0 4px 12px rgba(5, 150, 105, 0.2);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.moderate {
+    background: #d97706;
+    border-color: #b45309;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.3), 0 4px 12px rgba(217, 119, 6, 0.2);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.heavy {
+    background: #991b1b;
+    border-color: #7f1d1d;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.3), 0 4px 12px rgba(153, 27, 27, 0.2);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.very-heavy {
+    background: #7f1d1d;
+    border-color: #450a0a;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.4), 0 4px 12px rgba(127, 29, 29, 0.3);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+.intensity-buttons-small input[type="radio"]:checked + .intensity-btn-small.severe {
+    background: #dc2626;
+    border-color: #b91c1c;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3), 0 4px 12px rgba(220, 38, 38, 0.2);
+    transform: scale(1.05);
+    font-weight: 700;
+}
+
+/* Inline notes editing */
+.entry-notes-editable {
+    background: rgba(102, 126, 234, 0.05);
+    border-left: 3px solid #667eea;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+}
+
+.entry-notes-editable .notes-label {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.notes-textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.notes-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    background: white;
 }
 
 /* Empty state */
