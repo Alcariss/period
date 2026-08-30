@@ -52,7 +52,6 @@ button, input, textarea {
 .add-form {
   padding: 18px;
   margin-bottom: 18px;
-  overflow: hidden;
 }
 
 .add-form label {
@@ -68,14 +67,6 @@ textarea {
   border-radius: 12px;
   padding: 12px 14px;
   background: #fff;
-}
-
-#add-date {
-  display: block;
-  max-width: min(100%, calc(100vw - 68px));
-  min-width: 0;
-  overflow: hidden;
-  -webkit-min-logical-width: 0%;
 }
 
 .symptoms-grid {
@@ -208,7 +199,6 @@ button:disabled {
 
 .entry-card {
   padding: 16px;
-  overflow: hidden;
 }
 
 .period-rail {
@@ -281,14 +271,6 @@ button:disabled {
   border-radius: 12px;
   padding: 12px 14px;
   background: #fff;
-}
-
-.entry-edit input[type='date'] {
-  display: block;
-  max-width: min(100%, calc(100vw - 68px));
-  min-width: 0;
-  overflow: hidden;
-  -webkit-min-logical-width: 0%;
 }
 
 .edit-error {
