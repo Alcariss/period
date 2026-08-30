@@ -52,6 +52,7 @@ button, input, textarea {
 .add-form {
   padding: 18px;
   margin-bottom: 18px;
+  overflow: hidden;
 }
 
 .add-form label {
@@ -72,7 +73,7 @@ textarea {
 #add-date {
   max-width: 100%;
   min-width: 0;
-  -webkit-min-logical-width: 0%;
+  overflow: hidden;
 }
 
 .symptoms-grid {
@@ -193,6 +194,7 @@ button:disabled {
 .entry-card {
   padding: 16px;
   margin-bottom: 12px;
+  overflow: hidden;
 }
 
 .entry-header {
@@ -232,7 +234,7 @@ button:disabled {
 .entry-edit input[type='date'] {
   max-width: 100%;
   min-width: 0;
-  -webkit-min-logical-width: 0%;
+  overflow: hidden;
 }
 
 .edit-error {
