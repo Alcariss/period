@@ -5,6 +5,7 @@ import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/format';
 import { normalizeEntry } from './lib/entry-normalizer';
 import { getCyclePhase, predictNextPeriod } from './lib/cycle-predictor';
+import { getSymptomLabel, SYMPTOM_META, type SymptomField } from './lib/symptom-labels';
 import type { Diagnostics, Entry } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -34,59 +35,7 @@ app.innerHTML = `
         <label for="add-date">Date</label>
         <input id="add-date" type="date" required />
 
-        <div class="symptoms-grid">
-          <div>
-            <label>Bleeding</label>
-            <div class="segmented">
-              <label><input type="radio" name="krvaceni" value="0" checked />0</label>
-              <label><input type="radio" name="krvaceni" value="1" />1</label>
-              <label><input type="radio" name="krvaceni" value="2" />2</label>
-              <label><input type="radio" name="krvaceni" value="3" />3</label>
-              <label><input type="radio" name="krvaceni" value="4" />4</label>
-              <label><input type="radio" name="krvaceni" value="5" />5</label>
-            </div>
-          </div>
-
-          <div>
-            <label>Mood</label>
-            <div class="segmented">
-              <label><input type="radio" name="nalady" value="0" checked />0</label>
-              <label><input type="radio" name="nalady" value="1" />1</label>
-              <label><input type="radio" name="nalady" value="2" />2</label>
-              <label><input type="radio" name="nalady" value="3" />3</label>
-            </div>
-          </div>
-
-          <div>
-            <label>Abdominal pressure</label>
-            <div class="segmented">
-              <label><input type="radio" name="tlak" value="0" checked />0</label>
-              <label><input type="radio" name="tlak" value="1" />1</label>
-              <label><input type="radio" name="tlak" value="2" />2</label>
-              <label><input type="radio" name="tlak" value="3" />3</label>
-            </div>
-          </div>
-
-          <div>
-            <label>Bloating</label>
-            <div class="segmented">
-              <label><input type="radio" name="nadymani" value="0" checked />0</label>
-              <label><input type="radio" name="nadymani" value="1" />1</label>
-              <label><input type="radio" name="nadymani" value="2" />2</label>
-              <label><input type="radio" name="nadymani" value="3" />3</label>
-            </div>
-          </div>
-
-          <div>
-            <label>Energy</label>
-            <div class="segmented">
-              <label><input type="radio" name="energie" value="0" checked />0</label>
-              <label><input type="radio" name="energie" value="1" />1</label>
-              <label><input type="radio" name="energie" value="2" />2</label>
-              <label><input type="radio" name="energie" value="3" />3</label>
-            </div>
-          </div>
-        </div>
+        <div class="symptoms-grid" id="symptoms-grid"></div>
 
         <label for="notes">Notes</label>
         <textarea id="notes" rows="3" placeholder="Optional notes..."></textarea>
@@ -112,6 +61,51 @@ const addForm = requiredNode<HTMLFormElement>('#add-form');
 const addDate = requiredNode<HTMLInputElement>('#add-date');
 const addSubmit = requiredNode<HTMLButtonElement>('#add-submit');
 const addError = requiredNode<HTMLElement>('#add-error');
+const symptomsGrid = requiredNode<HTMLElement>('#symptoms-grid');
+
+const SYMPTOM_FIELDS: SymptomField[] = ['krvaceni', 'nalady', 'tlak', 'nadymani', 'energie'];
+
+function renderSymptomSliders(): void {
+  symptomsGrid.innerHTML = SYMPTOM_FIELDS.map((field) => {
+    const meta = SYMPTOM_META[field];
+    return `
+      <div class="symptom-slider">
+        <div class="symptom-slider-header">
+          <label for="slider-${field}">${meta.emoji} ${escapeHtml(meta.name)}</label>
+          <span class="symptom-slider-value" id="slider-${field}-value">${escapeHtml(meta.labels[0] ?? '')}</span>
+        </div>
+        <input
+          type="range"
+          id="slider-${field}"
+          name="${field}"
+          min="0"
+          max="${meta.max}"
+          step="1"
+          value="0"
+        />
+      </div>
+    `;
+  }).join('');
+
+  SYMPTOM_FIELDS.forEach((field) => {
+    const slider = requiredNode<HTMLInputElement>(`#slider-${field}`);
+    const valueLabel = requiredNode<HTMLElement>(`#slider-${field}-value`);
+
+    slider.addEventListener('input', () => {
+      valueLabel.textContent = getSymptomLabel(field, slider.value);
+    });
+  });
+}
+
+function resetSymptomSliderLabels(): void {
+  SYMPTOM_FIELDS.forEach((field) => {
+    const slider = requiredNode<HTMLInputElement>(`#slider-${field}`);
+    const valueLabel = requiredNode<HTMLElement>(`#slider-${field}-value`);
+    valueLabel.textContent = getSymptomLabel(field, slider.value);
+  });
+}
+
+renderSymptomSliders();
 
 addDate.value = todayLocalIsoDate();
 
@@ -135,6 +129,7 @@ addForm.addEventListener('submit', async (event) => {
 
     await saveEntry(entry);
     addForm.reset();
+    resetSymptomSliderLabels();
     addDate.value = todayLocalIsoDate();
     await refreshEntries();
   } catch (error) {
@@ -174,14 +169,14 @@ function renderEntries(entries: Entry[]): void {
         <article class="entry-card">
           <div class="entry-header">
             <strong>${escapeHtml(formatDate(entry.date))}</strong>
-            <button type="button" class="delete-btn" data-date="${escapeHtml(entry.date)}">Delete</button>
+            <button type="button" class="delete-btn" data-date="${escapeHtml(entry.date)}">Smazat</button>
           </div>
           <ul class="entry-metrics">
-            <li>Bleeding: ${escapeHtml(entry.krvaceni)}</li>
-            <li>Mood: ${escapeHtml(entry.nalady)}</li>
-            <li>Pressure: ${escapeHtml(entry.tlak)}</li>
-            <li>Bloating: ${escapeHtml(entry.nadymani)}</li>
-            <li>Energy: ${escapeHtml(entry.energie)}</li>
+            <li>${SYMPTOM_META.krvaceni.emoji} ${SYMPTOM_META.krvaceni.name}: ${escapeHtml(getSymptomLabel('krvaceni', entry.krvaceni))}</li>
+            <li>${SYMPTOM_META.nalady.emoji} ${SYMPTOM_META.nalady.name}: ${escapeHtml(getSymptomLabel('nalady', entry.nalady))}</li>
+            <li>${SYMPTOM_META.tlak.emoji} ${SYMPTOM_META.tlak.name}: ${escapeHtml(getSymptomLabel('tlak', entry.tlak))}</li>
+            <li>${SYMPTOM_META.nadymani.emoji} ${SYMPTOM_META.nadymani.name}: ${escapeHtml(getSymptomLabel('nadymani', entry.nadymani))}</li>
+            <li>${SYMPTOM_META.energie.emoji} ${SYMPTOM_META.energie.name}: ${escapeHtml(getSymptomLabel('energie', entry.energie))}</li>
           </ul>
           ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
         </article>
