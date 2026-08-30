@@ -96,6 +96,14 @@ describe('getCyclePhase', () => {
     expect(phase?.cycleDay).toBe(2);
   });
 
+  it('stays on cycle day 1 for an evening reference time on the period start day', () => {
+    const freshEntries = periodEntries('2026-06-01', 5);
+    const eveningOfStartDay = new Date('2026-06-01T22:05:00');
+    const phase = getCyclePhase(freshEntries, eveningOfStartDay);
+    expect(phase?.cycleDay).toBe(1);
+    expect(phase?.phase).toBe('menstrual');
+  });
+
   it('classifies a mid-cycle day before ovulation as follicular', () => {
     const phase = getCyclePhase(entries, new Date('2026-07-06'));
     expect(phase?.phase).toBe('follicular');

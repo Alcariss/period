@@ -39,8 +39,12 @@ function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 function daysBetween(from: Date, to: Date): number {
-  return Math.round((to.getTime() - from.getTime()) / MS_PER_DAY);
+  return Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / MS_PER_DAY);
 }
 
 function groupIntoPeriods(entries: Entry[]): Entry[][] {
