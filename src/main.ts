@@ -172,11 +172,11 @@ function renderEntries(entries: Entry[]): void {
             <button type="button" class="delete-btn" data-date="${escapeHtml(entry.date)}">Smazat</button>
           </div>
           <ul class="entry-metrics">
-            <li>${SYMPTOM_META.krvaceni.emoji} ${SYMPTOM_META.krvaceni.name}: ${escapeHtml(getSymptomLabel('krvaceni', entry.krvaceni))}</li>
-            <li>${SYMPTOM_META.nalady.emoji} ${SYMPTOM_META.nalady.name}: ${escapeHtml(getSymptomLabel('nalady', entry.nalady))}</li>
-            <li>${SYMPTOM_META.tlak.emoji} ${SYMPTOM_META.tlak.name}: ${escapeHtml(getSymptomLabel('tlak', entry.tlak))}</li>
-            <li>${SYMPTOM_META.nadymani.emoji} ${SYMPTOM_META.nadymani.name}: ${escapeHtml(getSymptomLabel('nadymani', entry.nadymani))}</li>
-            <li>${SYMPTOM_META.energie.emoji} ${SYMPTOM_META.energie.name}: ${escapeHtml(getSymptomLabel('energie', entry.energie))}</li>
+            <li>${SYMPTOM_META.krvaceni.name}: ${escapeHtml(getSymptomLabel('krvaceni', entry.krvaceni))}</li>
+            <li>${SYMPTOM_META.nalady.name}: ${escapeHtml(getSymptomLabel('nalady', entry.nalady))}</li>
+            <li>${SYMPTOM_META.tlak.name}: ${escapeHtml(getSymptomLabel('tlak', entry.tlak))}</li>
+            <li>${SYMPTOM_META.nadymani.name}: ${escapeHtml(getSymptomLabel('nadymani', entry.nadymani))}</li>
+            <li>${SYMPTOM_META.energie.name}: ${escapeHtml(getSymptomLabel('energie', entry.energie))}</li>
           </ul>
           ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
         </article>
@@ -263,7 +263,20 @@ function renderPrediction(entries: Entry[]): void {
     : '';
 
   predictionNode.innerHTML = `
-    <h3>Cycle prediction</h3>
+    <div class="prediction-card-header">
+      <h3>Cycle prediction</h3>
+      <button type="button" class="info-btn" id="prediction-info-btn" aria-label="How is this calculated?">ⓘ</button>
+    </div>
+    <div class="info-panel hidden" id="prediction-info-panel">
+      <p>The calculation only needs two dates per period: the first day you log
+      bleeding (Krvácení &gt; 0) and the last day before it stops. Everything else
+      is derived from those start/end dates, so log at least those two days each
+      period, and at least two full periods before a prediction appears.</p>
+      <p>Next period is estimated from the average length of your last logged cycles.
+      Ovulation is estimated 14 days before that date, not from the midpoint of the cycle,
+      because the luteal phase (after ovulation) stays fairly constant per person, while the
+      follicular phase (before ovulation) is what actually varies.</p>
+    </div>
     ${prediction ? `
       <p class="prediction-headline">${escapeHtml(daysUntilText)}</p>
       <p class="prediction-detail">
@@ -278,6 +291,12 @@ function renderPrediction(entries: Entry[]): void {
       Educational estimate only, not medical advice. Individual cycles vary.
     </p>
   `;
+
+  const infoButton = requiredNode<HTMLButtonElement>('#prediction-info-btn');
+  const infoPanel = requiredNode<HTMLElement>('#prediction-info-panel');
+  infoButton.addEventListener('click', () => {
+    infoPanel.classList.toggle('hidden');
+  });
 }
 
 async function refreshEntries(): Promise<void> {

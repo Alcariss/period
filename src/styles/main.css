@@ -69,6 +69,12 @@ textarea {
   background: #fff;
 }
 
+#add-date {
+  max-width: 100%;
+  min-width: 0;
+  -webkit-min-logical-width: 0%;
+}
+
 .symptoms-grid {
   display: grid;
   gap: 18px;
@@ -241,8 +247,46 @@ button:disabled {
   margin-bottom: 18px;
 }
 
+.prediction-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .prediction-card h3 {
   margin: 0 0 10px;
+}
+
+.info-btn {
+  background: none;
+  border: 1px solid rgba(219, 90, 140, 0.35);
+  color: #b23368;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.info-panel {
+  background: #fdf1f6;
+  border: 1px solid rgba(219, 90, 140, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.info-panel p {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: #6b4b5e;
+}
+
+.info-panel p:last-child {
+  margin-bottom: 0;
 }
 
 .prediction-headline {
@@ -251,6 +295,7 @@ button:disabled {
   color: #b23368;
   margin: 0 0 4px;
 }
+
 
 .prediction-detail {
   color: #6b4b5e;
