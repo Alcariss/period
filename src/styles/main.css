@@ -203,6 +203,36 @@ button:disabled {
   margin-bottom: 12px;
 }
 
+.entry-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn {
+  background: #f3e6eb;
+  color: #7a3355;
+  padding: 6px 10px;
+}
+
+.entry-edit label {
+  display: block;
+  margin: 12px 0 8px;
+  font-weight: 600;
+}
+
+.entry-edit textarea {
+  width: 100%;
+  border: 1px solid #ecc9d9;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.edit-error {
+  color: #b42318;
+  margin-top: 8px;
+}
+
 .entry-metrics {
   list-style: none;
   display: grid;

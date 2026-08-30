@@ -65,31 +65,34 @@ const symptomsGrid = requiredNode<HTMLElement>('#symptoms-grid');
 
 const SYMPTOM_FIELDS: SymptomField[] = ['krvaceni', 'nalady', 'tlak', 'nadymani', 'energie'];
 
-function renderSymptomSliders(): void {
-  symptomsGrid.innerHTML = SYMPTOM_FIELDS.map((field) => {
+function buildSliderMarkup(idPrefix: string, values: Partial<Record<SymptomField, string>> = {}): string {
+  return SYMPTOM_FIELDS.map((field) => {
     const meta = SYMPTOM_META[field];
+    const value = values[field] ?? '0';
     return `
       <div class="symptom-slider">
         <div class="symptom-slider-header">
-          <label for="slider-${field}">${meta.emoji} ${escapeHtml(meta.name)}</label>
-          <span class="symptom-slider-value" id="slider-${field}-value">${escapeHtml(meta.labels[0] ?? '')}</span>
+          <label for="${idPrefix}-${field}">${meta.emoji} ${escapeHtml(meta.name)}</label>
+          <span class="symptom-slider-value" id="${idPrefix}-${field}-value">${escapeHtml(getSymptomLabel(field, value))}</span>
         </div>
         <input
           type="range"
-          id="slider-${field}"
+          id="${idPrefix}-${field}"
           name="${field}"
           min="0"
           max="${meta.max}"
           step="1"
-          value="0"
+          value="${escapeHtml(value)}"
         />
       </div>
     `;
   }).join('');
+}
 
+function wireSliderInputs(idPrefix: string): void {
   SYMPTOM_FIELDS.forEach((field) => {
-    const slider = requiredNode<HTMLInputElement>(`#slider-${field}`);
-    const valueLabel = requiredNode<HTMLElement>(`#slider-${field}-value`);
+    const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
+    const valueLabel = requiredNode<HTMLElement>(`#${idPrefix}-${field}-value`);
 
     slider.addEventListener('input', () => {
       valueLabel.textContent = getSymptomLabel(field, slider.value);
@@ -97,12 +100,26 @@ function renderSymptomSliders(): void {
   });
 }
 
-function resetSymptomSliderLabels(): void {
+function resetSliderLabels(idPrefix: string): void {
   SYMPTOM_FIELDS.forEach((field) => {
-    const slider = requiredNode<HTMLInputElement>(`#slider-${field}`);
-    const valueLabel = requiredNode<HTMLElement>(`#slider-${field}-value`);
+    const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
+    const valueLabel = requiredNode<HTMLElement>(`#${idPrefix}-${field}-value`);
     valueLabel.textContent = getSymptomLabel(field, slider.value);
   });
+}
+
+function readSliderValues(idPrefix: string): Record<SymptomField, string> {
+  const result = {} as Record<SymptomField, string>;
+  SYMPTOM_FIELDS.forEach((field) => {
+    const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
+    result[field] = slider.value;
+  });
+  return result;
+}
+
+function renderSymptomSliders(): void {
+  symptomsGrid.innerHTML = buildSliderMarkup('add');
+  wireSliderInputs('add');
 }
 
 renderSymptomSliders();
@@ -117,19 +134,20 @@ addForm.addEventListener('submit', async (event) => {
 
   try {
     const formData = new FormData(addForm);
+    const sliderValues = readSliderValues('add');
     const entry = normalizeEntry({
       date: addDate.value,
-      krvaceni: String(formData.get('krvaceni') ?? '0'),
-      nalady: String(formData.get('nalady') ?? '0'),
-      tlak: String(formData.get('tlak') ?? '0'),
-      nadymani: String(formData.get('nadymani') ?? '0'),
-      energie: String(formData.get('energie') ?? '0'),
+      krvaceni: sliderValues.krvaceni,
+      nalady: sliderValues.nalady,
+      tlak: sliderValues.tlak,
+      nadymani: sliderValues.nadymani,
+      energie: sliderValues.energie,
       notes: String(formData.get('notes') ?? '')
     });
 
     await saveEntry(entry);
     addForm.reset();
-    resetSymptomSliderLabels();
+    resetSliderLabels('add');
     addDate.value = todayLocalIsoDate();
     await refreshEntries();
   } catch (error) {
@@ -166,19 +184,34 @@ function renderEntries(entries: Entry[]): void {
   entriesNode.innerHTML = entries
     .map(
       (entry) => `
-        <article class="entry-card">
-          <div class="entry-header">
-            <strong>${escapeHtml(formatDate(entry.date))}</strong>
-            <button type="button" class="delete-btn" data-date="${escapeHtml(entry.date)}">Smazat</button>
+        <article class="entry-card" data-date="${escapeHtml(entry.date)}">
+          <div class="entry-view">
+            <div class="entry-header">
+              <strong>${escapeHtml(formatDate(entry.date))}</strong>
+              <div class="entry-actions">
+                <button type="button" class="edit-btn" data-date="${escapeHtml(entry.date)}">Upravit</button>
+                <button type="button" class="delete-btn" data-date="${escapeHtml(entry.date)}">Smazat</button>
+              </div>
+            </div>
+            <ul class="entry-metrics">
+              <li>${SYMPTOM_META.krvaceni.name}: ${escapeHtml(getSymptomLabel('krvaceni', entry.krvaceni))}</li>
+              <li>${SYMPTOM_META.nalady.name}: ${escapeHtml(getSymptomLabel('nalady', entry.nalady))}</li>
+              <li>${SYMPTOM_META.tlak.name}: ${escapeHtml(getSymptomLabel('tlak', entry.tlak))}</li>
+              <li>${SYMPTOM_META.nadymani.name}: ${escapeHtml(getSymptomLabel('nadymani', entry.nadymani))}</li>
+              <li>${SYMPTOM_META.energie.name}: ${escapeHtml(getSymptomLabel('energie', entry.energie))}</li>
+            </ul>
+            ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
           </div>
-          <ul class="entry-metrics">
-            <li>${SYMPTOM_META.krvaceni.name}: ${escapeHtml(getSymptomLabel('krvaceni', entry.krvaceni))}</li>
-            <li>${SYMPTOM_META.nalady.name}: ${escapeHtml(getSymptomLabel('nalady', entry.nalady))}</li>
-            <li>${SYMPTOM_META.tlak.name}: ${escapeHtml(getSymptomLabel('tlak', entry.tlak))}</li>
-            <li>${SYMPTOM_META.nadymani.name}: ${escapeHtml(getSymptomLabel('nadymani', entry.nadymani))}</li>
-            <li>${SYMPTOM_META.energie.name}: ${escapeHtml(getSymptomLabel('energie', entry.energie))}</li>
-          </ul>
-          ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
+          <div class="entry-edit hidden">
+            <div class="symptoms-grid" id="edit-${escapeHtml(entry.date)}-grid"></div>
+            <label for="edit-${escapeHtml(entry.date)}-notes">Notes</label>
+            <textarea id="edit-${escapeHtml(entry.date)}-notes" rows="3">${escapeHtml(entry.notes)}</textarea>
+            <div class="form-actions">
+              <button type="button" class="btn-save" data-date="${escapeHtml(entry.date)}">Uložit</button>
+              <button type="button" class="btn-cancel" data-date="${escapeHtml(entry.date)}">Zrušit</button>
+            </div>
+            <p class="edit-error hidden"></p>
+          </div>
         </article>
       `
     )
@@ -195,6 +228,83 @@ function renderEntries(entries: Entry[]): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         setStatus(message, 'error');
+      }
+    });
+  });
+
+  entriesNode.querySelectorAll<HTMLButtonElement>('.edit-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const date = button.dataset.date ?? '';
+      const card = entriesNode.querySelector<HTMLElement>(`.entry-card[data-date="${date}"]`);
+      if (!card) return;
+
+      const entry = entries.find((item) => item.date === date);
+      if (!entry) return;
+
+      const idPrefix = `edit-${date}`;
+      const grid = requiredNode<HTMLElement>(`#${idPrefix}-grid`);
+      grid.innerHTML = buildSliderMarkup(idPrefix, {
+        krvaceni: entry.krvaceni,
+        nalady: entry.nalady,
+        tlak: entry.tlak,
+        nadymani: entry.nadymani,
+        energie: entry.energie
+      });
+      wireSliderInputs(idPrefix);
+
+      card.querySelector('.entry-view')?.classList.add('hidden');
+      card.querySelector('.entry-edit')?.classList.remove('hidden');
+    });
+  });
+
+  entriesNode.querySelectorAll<HTMLButtonElement>('.btn-cancel').forEach((button) => {
+    button.addEventListener('click', () => {
+      const date = button.dataset.date ?? '';
+      const card = entriesNode.querySelector<HTMLElement>(`.entry-card[data-date="${date}"]`);
+      if (!card) return;
+
+      card.querySelector('.entry-view')?.classList.remove('hidden');
+      card.querySelector('.entry-edit')?.classList.add('hidden');
+      card.querySelector('.edit-error')?.classList.add('hidden');
+    });
+  });
+
+  entriesNode.querySelectorAll<HTMLButtonElement>('.btn-save').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const date = button.dataset.date ?? '';
+      if (!date) return;
+
+      const idPrefix = `edit-${date}`;
+      const errorEl = requiredNode<HTMLElement>(`#edit-${date}-grid`).closest('.entry-edit')
+        ?.querySelector<HTMLElement>('.edit-error');
+      const notesField = requiredNode<HTMLTextAreaElement>(`#edit-${date}-notes`);
+
+      button.disabled = true;
+      button.textContent = 'Ukládám...';
+      errorEl?.classList.add('hidden');
+
+      try {
+        const sliderValues = readSliderValues(idPrefix);
+        const entry = normalizeEntry({
+          date,
+          krvaceni: sliderValues.krvaceni,
+          nalady: sliderValues.nalady,
+          tlak: sliderValues.tlak,
+          nadymani: sliderValues.nadymani,
+          energie: sliderValues.energie,
+          notes: notesField.value
+        });
+
+        await saveEntry(entry);
+        await refreshEntries();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (errorEl) {
+          errorEl.textContent = message;
+          errorEl.classList.remove('hidden');
+        }
+        button.disabled = false;
+        button.textContent = 'Uložit';
       }
     });
   });
@@ -283,6 +393,7 @@ function renderPrediction(entries: Entry[]): void {
         Expected ${escapeHtml(formatDate(prediction.predictedStartDate))}
         &middot; average cycle ${prediction.stats.averageCycleLengthDays} days
         (${prediction.stats.minCycleLengthDays}-${prediction.stats.maxCycleLengthDays})
+        &middot; based on ${prediction.stats.cycleCount} cycle${prediction.stats.cycleCount === 1 ? '' : 's'}
       </p>
       ${reliabilityNote}
     ` : ''}

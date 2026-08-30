@@ -16,7 +16,7 @@ export const SYMPTOM_META: Record<SymptomField, SymptomMeta> = {
   },
   nalady: {
     emoji: '🌙',
-    name: 'Nálady',
+    name: 'Výkyvy nálad',
     max: 3,
     labels: ['Žádné', 'Mírné', 'Střední', 'Silné']
   },
