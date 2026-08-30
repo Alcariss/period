@@ -203,6 +203,8 @@ function renderEntries(entries: Entry[]): void {
             ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
           </div>
           <div class="entry-edit hidden">
+            <label for="edit-${escapeHtml(entry.date)}-date">Date</label>
+            <input type="date" id="edit-${escapeHtml(entry.date)}-date" value="${escapeHtml(entry.date)}" required />
             <div class="symptoms-grid" id="edit-${escapeHtml(entry.date)}-grid"></div>
             <label for="edit-${escapeHtml(entry.date)}-notes">Notes</label>
             <textarea id="edit-${escapeHtml(entry.date)}-notes" rows="3">${escapeHtml(entry.notes)}</textarea>
@@ -271,13 +273,14 @@ function renderEntries(entries: Entry[]): void {
 
   entriesNode.querySelectorAll<HTMLButtonElement>('.btn-save').forEach((button) => {
     button.addEventListener('click', async () => {
-      const date = button.dataset.date ?? '';
-      if (!date) return;
+      const originalDate = button.dataset.date ?? '';
+      if (!originalDate) return;
 
-      const idPrefix = `edit-${date}`;
-      const errorEl = requiredNode<HTMLElement>(`#edit-${date}-grid`).closest('.entry-edit')
+      const idPrefix = `edit-${originalDate}`;
+      const errorEl = requiredNode<HTMLElement>(`#edit-${originalDate}-grid`).closest('.entry-edit')
         ?.querySelector<HTMLElement>('.edit-error');
-      const notesField = requiredNode<HTMLTextAreaElement>(`#edit-${date}-notes`);
+      const dateField = requiredNode<HTMLInputElement>(`#edit-${originalDate}-date`);
+      const notesField = requiredNode<HTMLTextAreaElement>(`#edit-${originalDate}-notes`);
 
       button.disabled = true;
       button.textContent = 'Ukládám...';
@@ -286,7 +289,7 @@ function renderEntries(entries: Entry[]): void {
       try {
         const sliderValues = readSliderValues(idPrefix);
         const entry = normalizeEntry({
-          date,
+          date: dateField.value,
           krvaceni: sliderValues.krvaceni,
           nalady: sliderValues.nalady,
           tlak: sliderValues.tlak,
@@ -295,6 +298,9 @@ function renderEntries(entries: Entry[]): void {
           notes: notesField.value
         });
 
+        if (entry.date !== originalDate) {
+          await deleteEntry(originalDate);
+        }
         await saveEntry(entry);
         await refreshEntries();
       } catch (error) {

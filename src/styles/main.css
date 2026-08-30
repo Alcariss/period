@@ -220,12 +220,19 @@ button:disabled {
   font-weight: 600;
 }
 
-.entry-edit textarea {
+.entry-edit textarea,
+.entry-edit input[type='date'] {
   width: 100%;
   border: 1px solid #ecc9d9;
   border-radius: 12px;
   padding: 12px 14px;
   background: #fff;
+}
+
+.entry-edit input[type='date'] {
+  max-width: 100%;
+  min-width: 0;
+  -webkit-min-logical-width: 0%;
 }
 
 .edit-error {
