@@ -1,0 +1,274 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, 'Segoe UI', sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  background: #fff7fb;
+  color: #2d1a2a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #ffeaf4, #fff7fb 30%, #fff);
+}
+
+button, input, textarea {
+  font: inherit;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.add-form,
+.entry-card,
+.update-banner,
+#status,
+.prediction-card,
+.debug {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(219, 90, 140, 0.15);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(219, 90, 140, 0.08);
+}
+
+.add-form {
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.add-form label {
+  display: block;
+  margin: 12px 0 8px;
+  font-weight: 600;
+}
+
+#add-date,
+textarea {
+  width: 100%;
+  border: 1px solid #ecc9d9;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.symptoms-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.segmented label {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid #ecc9d9;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.segmented input {
+  accent-color: #db5a8c;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+button {
+  border: none;
+  border-radius: 12px;
+  background: #db5a8c;
+  color: white;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-btn {
+  background: #f3e6eb;
+  color: #5a2d3d;
+  padding: 6px 10px;
+}
+
+.form-error,
+#status,
+.empty {
+  margin-top: 12px;
+}
+
+.form-error {
+  color: #b42318;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#status {
+  min-height: 20px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+}
+
+.status.info {
+  color: #6b4b5e;
+}
+
+.status.error {
+  color: #9c1d1d;
+}
+
+.status.success {
+  color: #0c7b5d;
+}
+
+.entry-card {
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.entry-metrics {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 10px;
+}
+
+.notes {
+  margin: 0;
+  color: #5d3d4d;
+}
+
+.debug {
+  margin-top: 18px;
+  padding: 12px 16px;
+}
+
+.debug h2 {
+  margin: 0 0 8px;
+}
+
+.debug dl {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+
+.prediction-card {
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.prediction-card h3 {
+  margin: 0 0 10px;
+}
+
+.prediction-headline {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #b23368;
+  margin: 0 0 4px;
+}
+
+.prediction-detail {
+  color: #6b4b5e;
+  margin: 0 0 6px;
+}
+
+.prediction-warning {
+  color: #a15c00;
+  margin: 0 0 10px;
+}
+
+.phase-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(219, 90, 140, 0.15);
+}
+
+.phase-label {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.phase-hormones {
+  color: #5d3d4d;
+  margin: 0 0 8px;
+}
+
+.phase-experiences {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+.phase-experiences li {
+  background: #f7e3ec;
+  color: #7a3355;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.prediction-disclaimer {
+  font-size: 0.8rem;
+  color: #9a8a92;
+  margin: 8px 0 0;
+}
+
