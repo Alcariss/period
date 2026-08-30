@@ -69,6 +69,12 @@ textarea {
   background: #fff;
 }
 
+#add-date {
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .symptoms-grid {
   display: grid;
   gap: 18px;
@@ -271,6 +277,12 @@ button:disabled {
   border-radius: 12px;
   padding: 12px 14px;
   background: #fff;
+}
+
+.entry-edit input[type='date'] {
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .edit-error {
