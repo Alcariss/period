@@ -100,6 +100,19 @@ function periodLengthDays(period: Entry[]): number {
   return daysBetween(start, end) + 1;
 }
 
+export function assignPeriodGroups(entries: Entry[]): Record<string, number> {
+  const periods = groupIntoPeriods(entries);
+  const groupByDate: Record<string, number> = {};
+
+  periods.forEach((period, index) => {
+    period.forEach((entry) => {
+      groupByDate[entry.date] = index;
+    });
+  });
+
+  return groupByDate;
+}
+
 export function computeCycleStats(entries: Entry[]): CycleStats | null {
   const periods = groupIntoPeriods(entries);
   if (periods.length < 2) {

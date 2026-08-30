@@ -191,10 +191,60 @@ button:disabled {
   color: #0c7b5d;
 }
 
+.entry-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.entry-row .entry-card {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
 .entry-card {
   padding: 16px;
-  margin-bottom: 12px;
   overflow: hidden;
+}
+
+.period-rail {
+  position: relative;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.period-rail.in-period.connects-above::before,
+.period-rail.in-period.connects-below::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 3px;
+  background: #db5a8c;
+  transform: translateX(-50%);
+}
+
+.period-rail.in-period.connects-above::before {
+  top: 0;
+  height: 50%;
+}
+
+.period-rail.in-period.connects-below::after {
+  bottom: 0;
+  height: 50%;
+}
+
+.period-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #db5a8c;
+  border: 2px solid #fff7fb;
+  transform: translate(-50%, -50%);
 }
 
 .entry-header {

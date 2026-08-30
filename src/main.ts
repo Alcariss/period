@@ -4,7 +4,7 @@ import { deleteEntry, fetchEntries, saveEntry } from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/format';
 import { normalizeEntry } from './lib/entry-normalizer';
-import { getCyclePhase, predictNextPeriod } from './lib/cycle-predictor';
+import { assignPeriodGroups, getCyclePhase, predictNextPeriod } from './lib/cycle-predictor';
 import { getSymptomLabel, SYMPTOM_META, type SymptomField } from './lib/symptom-labels';
 import type { Diagnostics, Entry } from './types';
 
@@ -181,10 +181,27 @@ function renderEntries(entries: Entry[]): void {
     return;
   }
 
+  const periodGroups = assignPeriodGroups(entries);
+
   entriesNode.innerHTML = entries
-    .map(
-      (entry) => `
-        <article class="entry-card" data-date="${escapeHtml(entry.date)}">
+    .map((entry, index) => {
+      const groupId = periodGroups[entry.date];
+      const inPeriod = groupId !== undefined;
+      const prevGroupId = index > 0 ? periodGroups[entries[index - 1]?.date ?? ''] : undefined;
+      const nextGroupId = index < entries.length - 1 ? periodGroups[entries[index + 1]?.date ?? ''] : undefined;
+      const connectsAbove = inPeriod && prevGroupId === groupId;
+      const connectsBelow = inPeriod && nextGroupId === groupId;
+      const railClasses = [
+        'period-rail',
+        inPeriod ? 'in-period' : '',
+        connectsAbove ? 'connects-above' : '',
+        connectsBelow ? 'connects-below' : ''
+      ].filter(Boolean).join(' ');
+
+      return `
+        <div class="entry-row">
+          <div class="${railClasses}">${inPeriod ? '<span class="period-dot"></span>' : ''}</div>
+          <article class="entry-card" data-date="${escapeHtml(entry.date)}">
           <div class="entry-view">
             <div class="entry-header">
               <strong>${escapeHtml(formatDate(entry.date))}</strong>
@@ -214,9 +231,10 @@ function renderEntries(entries: Entry[]): void {
             </div>
             <p class="edit-error hidden"></p>
           </div>
-        </article>
-      `
-    )
+          </article>
+        </div>
+      `;
+    })
     .join('');
 
   entriesNode.querySelectorAll<HTMLButtonElement>('.delete-btn').forEach((button) => {

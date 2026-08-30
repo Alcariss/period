@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getCyclePhase, computeCycleStats, predictNextPeriod } from './cycle-predictor';
+import { assignPeriodGroups, getCyclePhase, computeCycleStats, predictNextPeriod } from './cycle-predictor';
 import type { Entry } from '../types';
 
 function entry(date: string, krvaceni = '0'): Entry {
@@ -123,5 +123,26 @@ describe('getCyclePhase', () => {
   it('keeps classifying as luteal when a period is overdue rather than wrapping to a new cycle', () => {
     const phase = getCyclePhase(entries, new Date('2026-08-05'));
     expect(phase?.phase).toBe('luteal');
+  });
+});
+
+describe('assignPeriodGroups', () => {
+  it('assigns the same group index to consecutive bleeding days in one period', () => {
+    const groups = assignPeriodGroups(periodEntries('2026-06-01', 3));
+    expect(groups['2026-06-01']).toBe(0);
+    expect(groups['2026-06-02']).toBe(0);
+    expect(groups['2026-06-03']).toBe(0);
+  });
+
+  it('assigns increasing group indices to separate periods', () => {
+    const entries = [...periodEntries('2026-06-01', 3), ...periodEntries('2026-06-29', 3)];
+    const groups = assignPeriodGroups(entries);
+    expect(groups['2026-06-01']).toBe(0);
+    expect(groups['2026-06-29']).toBe(1);
+  });
+
+  it('does not assign a group to non-bleeding entries', () => {
+    const groups = assignPeriodGroups([entry('2026-06-15', '0')]);
+    expect(groups['2026-06-15']).toBeUndefined();
   });
 });
