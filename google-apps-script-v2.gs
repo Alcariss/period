@@ -1,8 +1,6 @@
 const API_VERSION = '2.0.0';
 const SCHEMA_VERSION = 1;
 
-const TOKEN = 'replace-with-shared-token';
-
 const PRIMARY_SHEET_URL = 'https://docs.google.com/spreadsheets/d/PRIMARY_SHEET_ID/edit';
 const FALLBACK_SHEET_URL = 'https://docs.google.com/spreadsheets/d/FALLBACK_SHEET_ID/edit';
 
@@ -250,7 +248,9 @@ function responseMeta(source) {
 }
 
 function isAuthorized(token) {
-  return TOKEN && token === TOKEN;
+  // Set via Apps Script Project Settings > Script Properties, never in source.
+  var expectedToken = PropertiesService.getScriptProperties().getProperty('SHARED_TOKEN');
+  return expectedToken && token === expectedToken;
 }
 
 function shouldAttemptFallback(errorCode) {
