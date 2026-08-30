@@ -71,9 +71,11 @@ textarea {
 }
 
 #add-date {
-  max-width: 100%;
+  display: block;
+  max-width: min(100%, calc(100vw - 68px));
   min-width: 0;
   overflow: hidden;
+  -webkit-min-logical-width: 0%;
 }
 
 .symptoms-grid {
@@ -231,8 +233,8 @@ button:disabled {
 }
 
 .period-rail.in-period.connects-below::after {
-  bottom: 0;
-  height: 50%;
+  bottom: -12px;
+  height: calc(50% + 12px);
 }
 
 .period-dot {
@@ -282,9 +284,11 @@ button:disabled {
 }
 
 .entry-edit input[type='date'] {
-  max-width: 100%;
+  display: block;
+  max-width: min(100%, calc(100vw - 68px));
   min-width: 0;
   overflow: hidden;
+  -webkit-min-logical-width: 0%;
 }
 
 .edit-error {
