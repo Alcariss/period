@@ -6,7 +6,10 @@ import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/f
 import { normalizeEntry } from './lib/entry-normalizer';
 import { assignPeriodGroups, getCyclePhase, predictNextPeriod } from './lib/cycle-predictor';
 import { getSymptomLabel, SYMPTOM_META, type SymptomField } from './lib/symptom-labels';
+import { activeOptionalFields, availableFieldsToAdd } from './lib/symptom-fields';
 import type { Diagnostics, Entry } from './types';
+
+const REQUIRED_FIELD: SymptomField = 'krvaceni';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) {
@@ -22,6 +25,17 @@ function requiredNode<T extends HTMLElement>(selector: string): T {
   return node;
 }
 
+function symptomFormMarkup(idPrefix: string): string {
+  return `
+    <div id="${idPrefix}-krvaceni-host"></div>
+    <div class="optional-symptoms" id="${idPrefix}-optional-host"></div>
+    <div class="add-symptom-control">
+      <button type="button" class="add-symptom-btn" id="${idPrefix}-add-btn" aria-label="Add symptom">+</button>
+      <div class="add-symptom-menu hidden" id="${idPrefix}-add-menu"></div>
+    </div>
+  `;
+}
+
 app.innerHTML = `
   <main class="container">
     <header class="header">
@@ -34,7 +48,7 @@ app.innerHTML = `
       <form id="add-form">
         <input id="add-date" type="date" aria-label="Date" required />
 
-        <div class="symptoms-grid" id="symptoms-grid"></div>
+        ${symptomFormMarkup('add')}
 
         <textarea id="notes" rows="3" aria-label="Notes" placeholder="Optional notes..."></textarea>
 
@@ -59,68 +73,134 @@ const addForm = requiredNode<HTMLFormElement>('#add-form');
 const addDate = requiredNode<HTMLInputElement>('#add-date');
 const addSubmit = requiredNode<HTMLButtonElement>('#add-submit');
 const addError = requiredNode<HTMLElement>('#add-error');
-const symptomsGrid = requiredNode<HTMLElement>('#symptoms-grid');
 
-const SYMPTOM_FIELDS: SymptomField[] = ['krvaceni', 'nalady', 'tlak', 'nadymani', 'energie'];
+type SymptomFormValues = Record<SymptomField, string>;
 
-function buildSliderMarkup(idPrefix: string, values: Partial<Record<SymptomField, string>> = {}): string {
-  return SYMPTOM_FIELDS.map((field) => {
-    const meta = SYMPTOM_META[field];
-    const value = values[field] ?? '0';
-    return `
-      <div class="symptom-slider">
-        <div class="symptom-slider-header">
-          <label for="${idPrefix}-${field}">${meta.emoji} ${escapeHtml(meta.name)}</label>
+type SymptomFormHosts = {
+  krvaceniHost: HTMLElement;
+  optionalHost: HTMLElement;
+  addButton: HTMLButtonElement;
+  addMenu: HTMLElement;
+};
+
+function buildSliderRow(idPrefix: string, field: SymptomField, value: string, removable: boolean): string {
+  const meta = SYMPTOM_META[field];
+  const removeButton = removable
+    ? `<button type="button" class="symptom-remove-btn" id="${idPrefix}-remove-${field}" aria-label="Remove ${escapeHtml(meta.name)}">&times;</button>`
+    : '';
+
+  return `
+    <div class="symptom-slider">
+      <div class="symptom-slider-header">
+        <label for="${idPrefix}-${field}">${meta.emoji} ${escapeHtml(meta.name)}</label>
+        <div class="symptom-slider-header-end">
           <span class="symptom-slider-value" id="${idPrefix}-${field}-value">${escapeHtml(getSymptomLabel(field, value))}</span>
+          ${removeButton}
         </div>
-        <input
-          type="range"
-          id="${idPrefix}-${field}"
-          name="${field}"
-          min="0"
-          max="${meta.max}"
-          step="1"
-          value="${escapeHtml(value)}"
-        />
       </div>
-    `;
-  }).join('');
+      <input
+        type="range"
+        id="${idPrefix}-${field}"
+        name="${field}"
+        min="0"
+        max="${meta.max}"
+        step="1"
+        value="${escapeHtml(value)}"
+      />
+    </div>
+  `;
 }
 
-function wireSliderInputs(idPrefix: string): void {
-  SYMPTOM_FIELDS.forEach((field) => {
-    const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
-    const valueLabel = requiredNode<HTMLElement>(`#${idPrefix}-${field}-value`);
+function wireSliderRow(idPrefix: string, field: SymptomField, onChange: (value: string) => void): void {
+  const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
+  const valueLabel = requiredNode<HTMLElement>(`#${idPrefix}-${field}-value`);
 
-    slider.addEventListener('input', () => {
-      valueLabel.textContent = getSymptomLabel(field, slider.value);
-    });
-  });
-}
-
-function resetSliderLabels(idPrefix: string): void {
-  SYMPTOM_FIELDS.forEach((field) => {
-    const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
-    const valueLabel = requiredNode<HTMLElement>(`#${idPrefix}-${field}-value`);
+  slider.addEventListener('input', () => {
     valueLabel.textContent = getSymptomLabel(field, slider.value);
+    onChange(slider.value);
   });
 }
 
-function readSliderValues(idPrefix: string): Record<SymptomField, string> {
-  const result = {} as Record<SymptomField, string>;
-  SYMPTOM_FIELDS.forEach((field) => {
-    const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
-    result[field] = slider.value;
+function createSymptomForm(
+  idPrefix: string,
+  hosts: SymptomFormHosts,
+  initialValues: Partial<SymptomFormValues>
+): { readValues: () => SymptomFormValues } {
+  const state: SymptomFormValues = {
+    krvaceni: initialValues.krvaceni ?? '0',
+    nalady: (initialValues.nalady ?? '').trim(),
+    tlak: (initialValues.tlak ?? '').trim(),
+    nadymani: (initialValues.nadymani ?? '').trim(),
+    energie: (initialValues.energie ?? '').trim()
+  };
+
+  function render(): void {
+    hosts.krvaceniHost.innerHTML = buildSliderRow(idPrefix, REQUIRED_FIELD, state[REQUIRED_FIELD], false);
+    wireSliderRow(idPrefix, REQUIRED_FIELD, (value) => {
+      state[REQUIRED_FIELD] = value;
+    });
+
+    const active = activeOptionalFields(state);
+    hosts.optionalHost.innerHTML = active.map((field) => buildSliderRow(idPrefix, field, state[field], true)).join('');
+    active.forEach((field) => {
+      wireSliderRow(idPrefix, field, (value) => {
+        state[field] = value;
+      });
+
+      const removeButton = requiredNode<HTMLButtonElement>(`#${idPrefix}-remove-${field}`);
+      removeButton.addEventListener('click', () => {
+        state[field] = '';
+        render();
+      });
+    });
+
+    const available = availableFieldsToAdd(active);
+    hosts.addMenu.innerHTML = available
+      .map((field) => {
+        const meta = SYMPTOM_META[field];
+        return `<button type="button" class="add-symptom-option" id="${idPrefix}-option-${field}">${meta.emoji} ${escapeHtml(meta.name)}</button>`;
+      })
+      .join('');
+    available.forEach((field) => {
+      const optionButton = requiredNode<HTMLButtonElement>(`#${idPrefix}-option-${field}`);
+      optionButton.addEventListener('click', () => {
+        state[field] = '0';
+        hosts.addMenu.classList.add('hidden');
+        render();
+      });
+    });
+
+    hosts.addButton.disabled = available.length === 0;
+    if (available.length === 0) {
+      hosts.addMenu.classList.add('hidden');
+    }
+  }
+
+  render();
+
+  return {
+    readValues: () => ({ ...state })
+  };
+}
+
+function wireAddMenuToggle(hosts: SymptomFormHosts): void {
+  hosts.addButton.addEventListener('click', () => {
+    hosts.addMenu.classList.toggle('hidden');
   });
-  return result;
 }
 
-function renderSymptomSliders(): void {
-  symptomsGrid.innerHTML = buildSliderMarkup('add');
-  wireSliderInputs('add');
+function symptomFormHosts(idPrefix: string): SymptomFormHosts {
+  return {
+    krvaceniHost: requiredNode<HTMLElement>(`#${idPrefix}-krvaceni-host`),
+    optionalHost: requiredNode<HTMLElement>(`#${idPrefix}-optional-host`),
+    addButton: requiredNode<HTMLButtonElement>(`#${idPrefix}-add-btn`),
+    addMenu: requiredNode<HTMLElement>(`#${idPrefix}-add-menu`)
+  };
 }
 
-renderSymptomSliders();
+const addFormHosts = symptomFormHosts('add');
+wireAddMenuToggle(addFormHosts);
+let addSymptomForm = createSymptomForm('add', addFormHosts, {});
 
 addDate.value = todayLocalIsoDate();
 
@@ -132,20 +212,20 @@ addForm.addEventListener('submit', async (event) => {
 
   try {
     const formData = new FormData(addForm);
-    const sliderValues = readSliderValues('add');
+    const symptomValues = addSymptomForm.readValues();
     const entry = normalizeEntry({
       date: addDate.value,
-      krvaceni: sliderValues.krvaceni,
-      nalady: sliderValues.nalady,
-      tlak: sliderValues.tlak,
-      nadymani: sliderValues.nadymani,
-      energie: sliderValues.energie,
+      krvaceni: symptomValues.krvaceni,
+      nalady: symptomValues.nalady,
+      tlak: symptomValues.tlak,
+      nadymani: symptomValues.nadymani,
+      energie: symptomValues.energie,
       notes: String(formData.get('notes') ?? '')
     });
 
     await saveEntry(entry);
     addForm.reset();
-    resetSliderLabels('add');
+    addSymptomForm = createSymptomForm('add', addFormHosts, {});
     addDate.value = todayLocalIsoDate();
     await refreshEntries();
   } catch (error) {
@@ -173,6 +253,7 @@ function setStatus(message: string, kind: 'info' | 'error' | 'success'): void {
   }
 }
 
+
 function renderEntries(entries: Entry[]): void {
   if (entries.length === 0) {
     entriesNode.innerHTML = '<p class="empty">No entries yet.</p>';
@@ -180,6 +261,7 @@ function renderEntries(entries: Entry[]): void {
   }
 
   const periodGroups = assignPeriodGroups(entries);
+  const editSymptomForms = new Map<string, { readValues: () => SymptomFormValues }>();
 
   entriesNode.innerHTML = entries
     .map((entry, index) => {
@@ -196,6 +278,11 @@ function renderEntries(entries: Entry[]): void {
         connectsBelow ? 'connects-below' : ''
       ].filter(Boolean).join(' ');
 
+      const activeMetrics = activeOptionalFields(entry);
+      const metricsMarkup = [REQUIRED_FIELD, ...activeMetrics]
+        .map((field) => `<li>${SYMPTOM_META[field].name}: ${escapeHtml(getSymptomLabel(field, entry[field]))}</li>`)
+        .join('');
+
       return `
         <div class="entry-row">
           <div class="${railClasses}">${inPeriod ? '<span class="period-dot"></span>' : ''}</div>
@@ -208,18 +295,12 @@ function renderEntries(entries: Entry[]): void {
                 <button type="button" class="delete-btn" data-date="${escapeHtml(entry.date)}">Smazat</button>
               </div>
             </div>
-            <ul class="entry-metrics">
-              <li>${SYMPTOM_META.krvaceni.name}: ${escapeHtml(getSymptomLabel('krvaceni', entry.krvaceni))}</li>
-              <li>${SYMPTOM_META.nalady.name}: ${escapeHtml(getSymptomLabel('nalady', entry.nalady))}</li>
-              <li>${SYMPTOM_META.tlak.name}: ${escapeHtml(getSymptomLabel('tlak', entry.tlak))}</li>
-              <li>${SYMPTOM_META.nadymani.name}: ${escapeHtml(getSymptomLabel('nadymani', entry.nadymani))}</li>
-              <li>${SYMPTOM_META.energie.name}: ${escapeHtml(getSymptomLabel('energie', entry.energie))}</li>
-            </ul>
+            <ul class="entry-metrics">${metricsMarkup}</ul>
             ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
           </div>
           <div class="entry-edit hidden">
             <input type="date" id="edit-${escapeHtml(entry.date)}-date" value="${escapeHtml(entry.date)}" aria-label="Date" required />
-            <div class="symptoms-grid" id="edit-${escapeHtml(entry.date)}-grid"></div>
+            ${symptomFormMarkup(`edit-${escapeHtml(entry.date)}`)}
             <textarea id="edit-${escapeHtml(entry.date)}-notes" rows="3" aria-label="Notes">${escapeHtml(entry.notes)}</textarea>
             <div class="form-actions">
               <button type="button" class="btn-save" data-date="${escapeHtml(entry.date)}">Uložit</button>
@@ -232,6 +313,10 @@ function renderEntries(entries: Entry[]): void {
       `;
     })
     .join('');
+
+  entries.forEach((entry) => {
+    wireAddMenuToggle(symptomFormHosts(`edit-${entry.date}`));
+  });
 
   entriesNode.querySelectorAll<HTMLButtonElement>('.delete-btn').forEach((button) => {
     button.addEventListener('click', async () => {
@@ -258,15 +343,13 @@ function renderEntries(entries: Entry[]): void {
       if (!entry) return;
 
       const idPrefix = `edit-${date}`;
-      const grid = requiredNode<HTMLElement>(`#${idPrefix}-grid`);
-      grid.innerHTML = buildSliderMarkup(idPrefix, {
+      editSymptomForms.set(date, createSymptomForm(idPrefix, symptomFormHosts(idPrefix), {
         krvaceni: entry.krvaceni,
         nalady: entry.nalady,
         tlak: entry.tlak,
         nadymani: entry.nadymani,
         energie: entry.energie
-      });
-      wireSliderInputs(idPrefix);
+      }));
 
       card.querySelector('.entry-view')?.classList.add('hidden');
       card.querySelector('.entry-edit')?.classList.remove('hidden');
@@ -290,8 +373,8 @@ function renderEntries(entries: Entry[]): void {
       const originalDate = button.dataset.date ?? '';
       if (!originalDate) return;
 
-      const idPrefix = `edit-${originalDate}`;
-      const errorEl = requiredNode<HTMLElement>(`#edit-${originalDate}-grid`).closest('.entry-edit')
+      const symptomForm = editSymptomForms.get(originalDate);
+      const errorEl = requiredNode<HTMLElement>(`#edit-${originalDate}-krvaceni-host`).closest('.entry-edit')
         ?.querySelector<HTMLElement>('.edit-error');
       const dateField = requiredNode<HTMLInputElement>(`#edit-${originalDate}-date`);
       const notesField = requiredNode<HTMLTextAreaElement>(`#edit-${originalDate}-notes`);
@@ -301,14 +384,18 @@ function renderEntries(entries: Entry[]): void {
       errorEl?.classList.add('hidden');
 
       try {
-        const sliderValues = readSliderValues(idPrefix);
+        if (!symptomForm) {
+          throw new Error('Symptom form not initialized');
+        }
+
+        const symptomValues = symptomForm.readValues();
         const entry = normalizeEntry({
           date: dateField.value,
-          krvaceni: sliderValues.krvaceni,
-          nalady: sliderValues.nalady,
-          tlak: sliderValues.tlak,
-          nadymani: sliderValues.nadymani,
-          energie: sliderValues.energie,
+          krvaceni: symptomValues.krvaceni,
+          nalady: symptomValues.nalady,
+          tlak: symptomValues.tlak,
+          nadymani: symptomValues.nadymani,
+          energie: symptomValues.energie,
           notes: notesField.value
         });
 

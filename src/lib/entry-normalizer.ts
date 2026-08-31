@@ -21,6 +21,23 @@ export function clampSymptomValue(rawValue: string | undefined, maxValue: number
   return String(clamped);
 }
 
+export function clampOptionalSymptomValue(rawValue: string | undefined, maxValue: number): string {
+  const trimmed = String(rawValue ?? '').trim();
+
+  if (trimmed === '') {
+    return '';
+  }
+
+  const parsed = Number.parseInt(trimmed, 10);
+
+  if (Number.isNaN(parsed)) {
+    return '';
+  }
+
+  const clamped = Math.min(Math.max(parsed, 0), maxValue);
+  return String(clamped);
+}
+
 export function normalizeDate(value: string | undefined): string {
   if (!value) {
     return '';
@@ -51,10 +68,10 @@ export function normalizeEntry(rawEntry: Partial<NewEntry>): Entry {
   return {
     date: normalizeDate(rawEntry.date),
     krvaceni: clampSymptomValue(rawEntry.krvaceni, SYMPTOM_LIMITS.krvaceni ?? 0),
-    nalady: clampSymptomValue(rawEntry.nalady, SYMPTOM_LIMITS.nalady ?? 0),
-    tlak: clampSymptomValue(rawEntry.tlak, SYMPTOM_LIMITS.tlak ?? 0),
-    nadymani: clampSymptomValue(rawEntry.nadymani, SYMPTOM_LIMITS.nadymani ?? 0),
-    energie: clampSymptomValue(rawEntry.energie, SYMPTOM_LIMITS.energie ?? 0),
+    nalady: clampOptionalSymptomValue(rawEntry.nalady, SYMPTOM_LIMITS.nalady ?? 0),
+    tlak: clampOptionalSymptomValue(rawEntry.tlak, SYMPTOM_LIMITS.tlak ?? 0),
+    nadymani: clampOptionalSymptomValue(rawEntry.nadymani, SYMPTOM_LIMITS.nadymani ?? 0),
+    energie: clampOptionalSymptomValue(rawEntry.energie, SYMPTOM_LIMITS.energie ?? 0),
     notes: typeof rawEntry.notes === 'string' ? rawEntry.notes.trim() : ''
   };
 }

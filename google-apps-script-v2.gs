@@ -126,10 +126,10 @@ function handleSave(params) {
   var entry = {
     date: date,
     krvaceni: clampSymptom(params.krvaceni, SYMPTOM_LIMITS.krvaceni),
-    nalady: clampSymptom(params.nalady, SYMPTOM_LIMITS.nalady),
-    tlak: clampSymptom(params.tlak, SYMPTOM_LIMITS.tlak),
-    nadymani: clampSymptom(params.nadymani, SYMPTOM_LIMITS.nadymani),
-    energie: clampSymptom(params.energie, SYMPTOM_LIMITS.energie),
+    nalady: clampOptionalSymptom(params.nalady, SYMPTOM_LIMITS.nalady),
+    tlak: clampOptionalSymptom(params.tlak, SYMPTOM_LIMITS.tlak),
+    nadymani: clampOptionalSymptom(params.nadymani, SYMPTOM_LIMITS.nadymani),
+    energie: clampOptionalSymptom(params.energie, SYMPTOM_LIMITS.energie),
     notes: String(params.notes || '').substring(0, 1000)
   };
 
@@ -357,10 +357,10 @@ function mapRow(columnMap, row) {
   return {
     date: formatDateToISO(row[columnMap.date]),
     krvaceni: clampSymptom(row[columnMap.krvaceni], SYMPTOM_LIMITS.krvaceni),
-    nalady: clampSymptom(row[columnMap.nalady], SYMPTOM_LIMITS.nalady),
-    tlak: clampSymptom(row[columnMap.tlak], SYMPTOM_LIMITS.tlak),
-    nadymani: clampSymptom(row[columnMap.nadymani], SYMPTOM_LIMITS.nadymani),
-    energie: clampSymptom(row[columnMap.energie], SYMPTOM_LIMITS.energie),
+    nalady: clampOptionalSymptom(row[columnMap.nalady], SYMPTOM_LIMITS.nalady),
+    tlak: clampOptionalSymptom(row[columnMap.tlak], SYMPTOM_LIMITS.tlak),
+    nadymani: clampOptionalSymptom(row[columnMap.nadymani], SYMPTOM_LIMITS.nadymani),
+    energie: clampOptionalSymptom(row[columnMap.energie], SYMPTOM_LIMITS.energie),
     notes: row[columnMap.notes] ? String(row[columnMap.notes]) : ''
   };
 }
@@ -369,6 +369,20 @@ function clampSymptom(value, max) {
   var parsed = parseInt(value, 10);
   if (isNaN(parsed)) {
     return '0';
+  }
+
+  return String(Math.max(0, Math.min(max, parsed)));
+}
+
+function clampOptionalSymptom(value, max) {
+  var trimmed = String(value === undefined || value === null ? '' : value).trim();
+  if (trimmed === '') {
+    return '';
+  }
+
+  var parsed = parseInt(trimmed, 10);
+  if (isNaN(parsed)) {
+    return '';
   }
 
   return String(Math.max(0, Math.min(max, parsed)));
