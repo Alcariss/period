@@ -33,7 +33,7 @@ export const SYMPTOM_META: Record<SymptomField, SymptomMeta> = {
     labels: ['Žádné', 'Mírné', 'Střední', 'Silné']
   },
   energie: {
-    emoji: '⚡',
+    emoji: String.fromCodePoint(0x1faab),
     name: 'Vyčerpání',
     max: 3,
     labels: ['Žádné', 'Mírné', 'Střední', 'Vysoké']
