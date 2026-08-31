@@ -24,7 +24,7 @@ export const SYMPTOM_META: Record<SymptomField, SymptomMeta> = {
     emoji: String.fromCodePoint(0x1fac3),
     name: 'Tlak v břiše',
     max: 3,
-    labels: ['Žádné', 'Mírné', 'Střední', 'Silné']
+    labels: ['Žádný', 'Mírný', 'Střední', 'Silný']
   },
   nadymani: {
     emoji: '🎈',
