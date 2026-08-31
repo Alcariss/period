@@ -433,3 +433,141 @@ button:disabled {
   margin: 8px 0 0;
 }
 
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff7fb, #ffeaf4 60%, #fbdbe8);
+  transition: opacity 0.6s ease;
+}
+
+.splash.splash-hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-drop {
+  position: absolute;
+  background: radial-gradient(circle at 35% 30%, #e0405f, #a3102e 70%, #7c0b23);
+  box-shadow: 0 12px 24px rgba(124, 11, 35, 0.35);
+  opacity: 0;
+  transform: scale(0);
+  animation: splash-splat 0.7s cubic-bezier(0.22, 1.4, 0.4, 1) forwards;
+}
+
+.splash-drop::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -70%;
+  width: 22%;
+  height: 90%;
+  background: inherit;
+  border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
+  transform: translateX(-50%);
+}
+
+.splash-drop-1 {
+  top: 18%;
+  left: 22%;
+  width: 90px;
+  height: 90px;
+  border-radius: 42% 58% 65% 35% / 45% 40% 60% 55%;
+  animation-delay: 0s;
+}
+
+.splash-drop-2 {
+  top: 62%;
+  left: 15%;
+  width: 60px;
+  height: 60px;
+  border-radius: 60% 40% 35% 65% / 55% 60% 40% 45%;
+  animation-delay: 0.12s;
+}
+
+.splash-drop-3 {
+  top: 30%;
+  left: 68%;
+  width: 70px;
+  height: 70px;
+  border-radius: 35% 65% 55% 45% / 60% 35% 65% 40%;
+  animation-delay: 0.22s;
+}
+
+.splash-drop-4 {
+  top: 70%;
+  left: 72%;
+  width: 100px;
+  height: 100px;
+  border-radius: 55% 45% 40% 60% / 40% 55% 45% 60%;
+  animation-delay: 0.3s;
+}
+
+.splash-drop-5 {
+  top: 8%;
+  left: 55%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50% 50% 60% 40% / 55% 45% 55% 45%;
+  animation-delay: 0.4s;
+}
+
+.splash-drop-6 {
+  top: 82%;
+  left: 42%;
+  width: 45px;
+  height: 45px;
+  border-radius: 45% 55% 50% 50% / 40% 55% 45% 60%;
+  animation-delay: 0.48s;
+}
+
+.splash-logo {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 3rem;
+  opacity: 0;
+  animation: splash-logo-in 0.5s ease forwards;
+  animation-delay: 0.6s;
+}
+
+.splash-logo span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #7c0b23;
+  letter-spacing: 0.02em;
+}
+
+@keyframes splash-splat {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.15) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.92;
+  }
+}
+
+@keyframes splash-logo-in {
+  0% {
+    transform: translateY(10px) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+

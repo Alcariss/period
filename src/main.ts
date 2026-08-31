@@ -477,7 +477,21 @@ async function refreshEntries(): Promise<void> {
   }
 }
 
+const SPLASH_MIN_VISIBLE_MS = 900;
+const SPLASH_FADE_MS = 600;
+
+function hideSplash(): void {
+  const splash = document.querySelector<HTMLElement>('#splash');
+  if (!splash) {
+    return;
+  }
+
+  splash.classList.add('splash-hide');
+  setTimeout(() => splash.remove(), SPLASH_FADE_MS);
+}
+
 async function bootstrap(): Promise<void> {
+  const splashStartedAt = Date.now();
   const cached = loadCache();
   if (cached && cached.entries.length > 0) {
     renderEntries(cached.entries);
@@ -495,6 +509,13 @@ async function bootstrap(): Promise<void> {
   }
 
   await refreshEntries();
+
+  const elapsedMs = Date.now() - splashStartedAt;
+  const remainingMs = SPLASH_MIN_VISIBLE_MS - elapsedMs;
+  if (remainingMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, remainingMs));
+  }
+  hideSplash();
 }
 
 function setupUpdatePrompt(): void {
