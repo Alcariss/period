@@ -32,13 +32,11 @@ app.innerHTML = `
 
     <section id="add-form-section" class="add-form">
       <form id="add-form">
-        <label for="add-date">Date</label>
-        <input id="add-date" type="date" required />
+        <input id="add-date" type="date" aria-label="Date" required />
 
         <div class="symptoms-grid" id="symptoms-grid"></div>
 
-        <label for="notes">Notes</label>
-        <textarea id="notes" rows="3" placeholder="Optional notes..."></textarea>
+        <textarea id="notes" rows="3" aria-label="Notes" placeholder="Optional notes..."></textarea>
 
         <div class="form-actions">
           <button type="submit" id="add-submit">Save entry</button>
@@ -220,11 +218,9 @@ function renderEntries(entries: Entry[]): void {
             ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
           </div>
           <div class="entry-edit hidden">
-            <label for="edit-${escapeHtml(entry.date)}-date">Date</label>
-            <input type="date" id="edit-${escapeHtml(entry.date)}-date" value="${escapeHtml(entry.date)}" required />
+            <input type="date" id="edit-${escapeHtml(entry.date)}-date" value="${escapeHtml(entry.date)}" aria-label="Date" required />
             <div class="symptoms-grid" id="edit-${escapeHtml(entry.date)}-grid"></div>
-            <label for="edit-${escapeHtml(entry.date)}-notes">Notes</label>
-            <textarea id="edit-${escapeHtml(entry.date)}-notes" rows="3">${escapeHtml(entry.notes)}</textarea>
+            <textarea id="edit-${escapeHtml(entry.date)}-notes" rows="3" aria-label="Notes">${escapeHtml(entry.notes)}</textarea>
             <div class="form-actions">
               <button type="button" class="btn-save" data-date="${escapeHtml(entry.date)}">Uložit</button>
               <button type="button" class="btn-cancel" data-date="${escapeHtml(entry.date)}">Zrušit</button>
