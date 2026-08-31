@@ -4,12 +4,12 @@ import { getSymptomLabel, SYMPTOM_META } from './symptom-labels';
 
 describe('getSymptomLabel', () => {
   it('returns the Czech label for a valid bleeding intensity', () => {
-    expect(getSymptomLabel('krvaceni', '0')).toBe('Žádné');
-    expect(getSymptomLabel('krvaceni', '5')).toBe('Velmi silné');
+    expect(getSymptomLabel('krvaceni', '0')).toBe('Žádná');
+    expect(getSymptomLabel('krvaceni', '5')).toBe('Velmi silná');
   });
 
-  it('returns the Czech label for the energy scale, which uses distinct wording', () => {
-    expect(getSymptomLabel('energie', '3')).toBe('Vyčerpaná');
+  it('returns the Czech label for the exhaustion scale, which uses distinct wording', () => {
+    expect(getSymptomLabel('energie', '3')).toBe('Vysoké');
   });
 
   it('falls back to the lowest label for out-of-range or invalid values', () => {

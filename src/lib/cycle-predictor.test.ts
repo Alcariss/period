@@ -120,6 +120,17 @@ describe('getCyclePhase', () => {
     expect(phase?.phase).toBe('luteal');
   });
 
+  it('estimates ovulation around cycle day 10 for a short 24-day average cycle', () => {
+    const shortCycleEntries = [
+      ...periodEntries('2026-06-01', 5),
+      ...periodEntries('2026-06-25', 5)
+    ];
+
+    const phase = getCyclePhase(shortCycleEntries, new Date('2026-07-04'));
+    expect(phase?.cycleDay).toBe(10);
+    expect(phase?.phase).toBe('ovulation');
+  });
+
   it('keeps classifying as luteal when a period is overdue rather than wrapping to a new cycle', () => {
     const phase = getCyclePhase(entries, new Date('2026-08-05'));
     expect(phase?.phase).toBe('luteal');

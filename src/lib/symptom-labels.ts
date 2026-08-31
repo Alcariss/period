@@ -10,9 +10,9 @@ export type SymptomMeta = {
 export const SYMPTOM_META: Record<SymptomField, SymptomMeta> = {
   krvaceni: {
     emoji: '🩸',
-    name: 'Krvácení',
+    name: 'Intenzita',
     max: 5,
-    labels: ['Žádné', 'Špinění', 'Slabé', 'Střední', 'Silné', 'Velmi silné']
+    labels: ['Žádná', 'Velmi slabá', 'Slabá', 'Střední', 'Silná', 'Velmi silná']
   },
   nalady: {
     emoji: '🌙',
@@ -34,9 +34,9 @@ export const SYMPTOM_META: Record<SymptomField, SymptomMeta> = {
   },
   energie: {
     emoji: '⚡',
-    name: 'Energie',
+    name: 'Vyčerpání',
     max: 3,
-    labels: ['Normální', 'Nízká', 'Velmi nízká', 'Vyčerpaná']
+    labels: ['Žádné', 'Mírné', 'Střední', 'Vysoké']
   }
 };
 

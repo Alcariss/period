@@ -403,7 +403,7 @@ function renderPrediction(entries: Entry[]): void {
     </div>
     <div class="info-panel hidden" id="prediction-info-panel">
       <p>The calculation only needs two dates per period: the first day you log
-      bleeding (Krvácení &gt; 0) and the last day before it stops. Everything else
+      bleeding (Intenzita &gt; 0) and the last day before it stops. Everything else
       is derived from those start/end dates, so log at least those two days each
       period, and at least two full periods before a prediction appears.</p>
       <p>Next period is estimated from the average length of your last logged cycles.
