@@ -15,13 +15,13 @@ export const SYMPTOM_META: Record<SymptomField, SymptomMeta> = {
     labels: ['Žádná', 'Velmi slabá', 'Slabá', 'Střední', 'Silná', 'Velmi silná']
   },
   nalady: {
-    emoji: '🌙',
+    emoji: String.fromCodePoint(0x1f3a2),
     name: 'Výkyvy nálad',
     max: 3,
     labels: ['Žádné', 'Mírné', 'Střední', 'Silné']
   },
   tlak: {
-    emoji: '💢',
+    emoji: String.fromCodePoint(0x1fac3),
     name: 'Tlak v břiše',
     max: 3,
     labels: ['Žádné', 'Mírné', 'Střední', 'Silné']
