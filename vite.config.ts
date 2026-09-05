@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: 'Period Tracker',
           short_name: 'Period',
-          description: 'Track your cycle symptoms with offline support.',
+          description: 'Track your cycle with start/end logging and offline support.',
           start_url: '.',
           scope: base,
           display: 'standalone',

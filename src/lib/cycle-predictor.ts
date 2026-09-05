@@ -1,5 +1,6 @@
 import type { Entry } from '../types';
-import type { CyclePhaseInfo, CyclePhaseName, CycleStats, PeriodPrediction } from './cycle-types';
+import type { CyclePhaseInfo, CyclePhaseName, CycleStats, PeriodPrediction, PeriodSpan } from './cycle-types';
+import { parsePeriodNotes } from './period-records';
 
 const SAME_PERIOD_MAX_GAP_DAYS = 7;
 const DEFAULT_PERIOD_LENGTH_DAYS = 5;
@@ -84,20 +85,51 @@ function groupIntoPeriods(entries: Entry[]): Entry[][] {
   return periods;
 }
 
-function periodStartDate(period: Entry[]): Date {
-  const first = period[0];
-  return toDate(first ? first.date : '');
-}
+export function listPeriodSpans(entries: Entry[]): PeriodSpan[] {
+  const explicit: PeriodSpan[] = [];
+  const explicitStarts = new Set<string>();
 
-function periodLengthDays(period: Entry[]): number {
-  if (period.length === 0) {
-    return DEFAULT_PERIOD_LENGTH_DAYS;
+  for (const entry of entries) {
+    const parsed = parsePeriodNotes(entry.notes);
+    if (!parsed || !entry.date) {
+      continue;
+    }
+
+    explicitStarts.add(entry.date);
+    explicit.push({
+      startDate: entry.date,
+      endDate: parsed.endDate,
+      open: parsed.endDate === null
+    });
   }
 
-  const start = periodStartDate(period);
-  const last = period[period.length - 1];
-  const end = toDate(last ? last.date : '');
-  return daysBetween(start, end) + 1;
+  const leftover = entries.filter((entry) => parsePeriodNotes(entry.notes) === null);
+  const legacy = groupIntoPeriods(leftover)
+    .map((group) => {
+      const first = group[0];
+      const last = group[group.length - 1];
+      return {
+        startDate: first?.date ?? '',
+        endDate: last?.date ?? first?.date ?? '',
+        open: false
+      } satisfies PeriodSpan;
+    })
+    .filter((period) => period.startDate && !explicitStarts.has(period.startDate));
+
+  return [...legacy, ...explicit].sort(
+    (left, right) => toDate(left.startDate).getTime() - toDate(right.startDate).getTime()
+  );
+}
+
+function spanStart(period: PeriodSpan): Date {
+  return toDate(period.startDate);
+}
+
+function spanLengthDays(period: PeriodSpan, referenceDate: Date): number {
+  const start = spanStart(period);
+  const end = period.endDate ? toDate(period.endDate) : startOfDay(referenceDate);
+  const length = daysBetween(start, end) + 1;
+  return length > 0 ? length : DEFAULT_PERIOD_LENGTH_DAYS;
 }
 
 export function assignPeriodGroups(entries: Entry[]): Record<string, number> {
@@ -114,7 +146,7 @@ export function assignPeriodGroups(entries: Entry[]): Record<string, number> {
 }
 
 export function computeCycleStats(entries: Entry[]): CycleStats | null {
-  const periods = groupIntoPeriods(entries);
+  const periods = listPeriodSpans(entries);
   if (periods.length < 2) {
     return null;
   }
@@ -126,7 +158,7 @@ export function computeCycleStats(entries: Entry[]): CycleStats | null {
     if (!current || !previous) {
       continue;
     }
-    cycleLengths.push(daysBetween(periodStartDate(previous), periodStartDate(current)));
+    cycleLengths.push(daysBetween(spanStart(previous), spanStart(current)));
   }
 
   const averageCycleLengthDays = Math.round(
@@ -150,13 +182,13 @@ export function predictNextPeriod(entries: Entry[], referenceDate: Date): Period
     return null;
   }
 
-  const periods = groupIntoPeriods(entries);
+  const periods = listPeriodSpans(entries);
   const lastPeriod = periods[periods.length - 1];
   if (!lastPeriod) {
     return null;
   }
 
-  const lastPeriodStart = periodStartDate(lastPeriod);
+  const lastPeriodStart = spanStart(lastPeriod);
   const predictedStart = new Date(lastPeriodStart);
   predictedStart.setDate(predictedStart.getDate() + stats.averageCycleLengthDays);
 
@@ -172,7 +204,7 @@ export function predictNextPeriod(entries: Entry[], referenceDate: Date): Period
 }
 
 export function getCyclePhase(entries: Entry[], referenceDate: Date): CyclePhaseInfo | null {
-  const periods = groupIntoPeriods(entries);
+  const periods = listPeriodSpans(entries);
   if (periods.length === 0) {
     return null;
   }
@@ -184,9 +216,9 @@ export function getCyclePhase(entries: Entry[], referenceDate: Date): CyclePhase
 
   const stats = computeCycleStats(entries);
   const averageCycleLengthDays = stats?.averageCycleLengthDays ?? 28;
-  const lastPeriodLengthDays = periodLengthDays(lastPeriod);
+  const lastPeriodLengthDays = spanLengthDays(lastPeriod, referenceDate);
 
-  const cycleDay = daysBetween(periodStartDate(lastPeriod), referenceDate) + 1;
+  const cycleDay = daysBetween(spanStart(lastPeriod), referenceDate) + 1;
   const ovulationDay = Math.max(
     lastPeriodLengthDays + 1,
     averageCycleLengthDays - LUTEAL_PHASE_DAYS

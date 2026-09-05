@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assignPeriodGroups, getCyclePhase, computeCycleStats, predictNextPeriod } from './cycle-predictor';
+import { assignPeriodGroups, getCyclePhase, computeCycleStats, listPeriodSpans, predictNextPeriod } from './cycle-predictor';
 import type { Entry } from '../types';
 
 function entry(date: string, krvaceni = '0'): Entry {
@@ -157,3 +157,32 @@ describe('assignPeriodGroups', () => {
     expect(groups['2026-06-15']).toBeUndefined();
   });
 });
+
+describe('listPeriodSpans', () => {
+  it('reads start/end period records from notes', () => {
+    const entries: Entry[] = [
+      { ...entry('2026-06-01', '1'), notes: '__period__:2026-06-05' },
+      { ...entry('2026-06-29', '1'), notes: '__period__:open' }
+    ];
+
+    expect(listPeriodSpans(entries)).toEqual([
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false },
+      { startDate: '2026-06-29', endDate: null, open: true }
+    ]);
+  });
+
+  it('keeps legacy bleeding groups alongside explicit period records', () => {
+    const entries: Entry[] = [
+      ...periodEntries('2026-06-01', 5),
+      { ...entry('2026-06-29', '1'), notes: '__period__:2026-07-03' }
+    ];
+
+    const spans = listPeriodSpans(entries);
+    expect(spans).toEqual([
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false },
+      { startDate: '2026-06-29', endDate: '2026-07-03', open: false }
+    ]);
+    expect(computeCycleStats(entries)?.averageCycleLengthDays).toBe(28);
+  });
+});
+

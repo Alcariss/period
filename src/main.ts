@@ -4,12 +4,10 @@ import { deleteEntry, fetchEntries, saveEntry } from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/format';
 import { normalizeEntry } from './lib/entry-normalizer';
-import { assignPeriodGroups, getCyclePhase, predictNextPeriod } from './lib/cycle-predictor';
-import { getSymptomLabel, SYMPTOM_META, type SymptomField } from './lib/symptom-labels';
-import { activeOptionalFields, availableFieldsToAdd } from './lib/symptom-fields';
+import { getCyclePhase, listPeriodSpans, predictNextPeriod } from './lib/cycle-predictor';
+import { findOpenPeriod, isPeriodRecord, rangesOverlap, toPeriodEntry } from './lib/period-records';
+import type { PeriodSpan } from './lib/cycle-types';
 import type { Diagnostics, Entry } from './types';
-
-const REQUIRED_FIELD: SymptomField = 'krvaceni';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) {
@@ -25,17 +23,6 @@ function requiredNode<T extends HTMLElement>(selector: string): T {
   return node;
 }
 
-function symptomFormMarkup(idPrefix: string): string {
-  return `
-    <div id="${idPrefix}-krvaceni-host"></div>
-    <div class="optional-symptoms" id="${idPrefix}-optional-host"></div>
-    <div class="add-symptom-control">
-      <button type="button" class="add-symptom-btn" id="${idPrefix}-add-btn" aria-label="Add symptom">+</button>
-      <div class="add-symptom-menu hidden" id="${idPrefix}-add-menu"></div>
-    </div>
-  `;
-}
-
 app.innerHTML = `
   <main class="container">
     <header class="header">
@@ -45,18 +32,16 @@ app.innerHTML = `
     <section id="prediction" class="prediction-card"></section>
 
     <section id="add-form-section" class="add-form">
-      <form id="add-form">
-        <input id="add-date" type="date" aria-label="Date" required />
-
-        ${symptomFormMarkup('add')}
-
-        <textarea id="notes" rows="3" aria-label="Notes" placeholder="Optional notes..."></textarea>
-
-        <div class="form-actions">
-          <button type="submit" id="add-submit">Save entry</button>
-        </div>
-        <p id="add-error" class="form-error hidden"></p>
-      </form>
+      <p id="period-status" class="period-status"></p>
+      <label class="date-field">
+        Date
+        <input id="action-date" type="date" required />
+      </label>
+      <div class="period-actions">
+        <button type="button" id="start-period">Start period</button>
+        <button type="button" id="end-period" class="btn-end">End period</button>
+      </div>
+      <p id="add-error" class="form-error hidden"></p>
     </section>
 
     <section id="status"></section>
@@ -69,172 +54,138 @@ const statusNode = requiredNode<HTMLElement>('#status');
 const entriesNode = requiredNode<HTMLElement>('#entries');
 const debugNode = requiredNode<HTMLElement>('#debug');
 const predictionNode = requiredNode<HTMLElement>('#prediction');
-const addForm = requiredNode<HTMLFormElement>('#add-form');
-const addDate = requiredNode<HTMLInputElement>('#add-date');
-const addSubmit = requiredNode<HTMLButtonElement>('#add-submit');
+const periodStatus = requiredNode<HTMLElement>('#period-status');
+const actionDate = requiredNode<HTMLInputElement>('#action-date');
+const startButton = requiredNode<HTMLButtonElement>('#start-period');
+const endButton = requiredNode<HTMLButtonElement>('#end-period');
 const addError = requiredNode<HTMLElement>('#add-error');
 
-type SymptomFormValues = Record<SymptomField, string>;
+actionDate.value = todayLocalIsoDate();
 
-type SymptomFormHosts = {
-  krvaceniHost: HTMLElement;
-  optionalHost: HTMLElement;
-  addButton: HTMLButtonElement;
-  addMenu: HTMLElement;
-};
+let latestEntries: Entry[] = [];
 
-function buildSliderRow(idPrefix: string, field: SymptomField, value: string, removable: boolean): string {
-  const meta = SYMPTOM_META[field];
-  const removeButton = removable
-    ? `<button type="button" class="symptom-remove-btn" id="${idPrefix}-remove-${field}" aria-label="Remove ${escapeHtml(meta.name)}">&times;</button>`
-    : '';
-
-  return `
-    <div class="symptom-slider">
-      <div class="symptom-slider-header">
-        <label for="${idPrefix}-${field}">${meta.emoji} ${escapeHtml(meta.name)}</label>
-        <div class="symptom-slider-header-end">
-          <span class="symptom-slider-value" id="${idPrefix}-${field}-value">${escapeHtml(getSymptomLabel(field, value))}</span>
-          ${removeButton}
-        </div>
-      </div>
-      <input
-        type="range"
-        id="${idPrefix}-${field}"
-        name="${field}"
-        min="0"
-        max="${meta.max}"
-        step="1"
-        value="${escapeHtml(value)}"
-      />
-    </div>
-  `;
+function showFormError(message: string): void {
+  addError.textContent = message;
+  addError.classList.remove('hidden');
 }
 
-function wireSliderRow(idPrefix: string, field: SymptomField, onChange: (value: string) => void): void {
-  const slider = requiredNode<HTMLInputElement>(`#${idPrefix}-${field}`);
-  const valueLabel = requiredNode<HTMLElement>(`#${idPrefix}-${field}-value`);
-
-  slider.addEventListener('input', () => {
-    valueLabel.textContent = getSymptomLabel(field, slider.value);
-    onChange(slider.value);
-  });
+function clearFormError(): void {
+  addError.textContent = '';
+  addError.classList.add('hidden');
 }
 
-function createSymptomForm(
-  idPrefix: string,
-  hosts: SymptomFormHosts,
-  initialValues: Partial<SymptomFormValues>
-): { readValues: () => SymptomFormValues } {
-  const state: SymptomFormValues = {
-    krvaceni: initialValues.krvaceni ?? '0',
-    nalady: (initialValues.nalady ?? '').trim(),
-    tlak: (initialValues.tlak ?? '').trim(),
-    nadymani: (initialValues.nadymani ?? '').trim(),
-    energie: (initialValues.energie ?? '').trim()
-  };
+function effectiveEnd(period: PeriodSpan): string {
+  return period.endDate ?? period.startDate;
+}
 
-  function render(): void {
-    hosts.krvaceniHost.innerHTML = buildSliderRow(idPrefix, REQUIRED_FIELD, state[REQUIRED_FIELD], false);
-    wireSliderRow(idPrefix, REQUIRED_FIELD, (value) => {
-      state[REQUIRED_FIELD] = value;
-    });
-
-    const active = activeOptionalFields(state);
-    hosts.optionalHost.innerHTML = active.map((field) => buildSliderRow(idPrefix, field, state[field], true)).join('');
-    active.forEach((field) => {
-      wireSliderRow(idPrefix, field, (value) => {
-        state[field] = value;
-      });
-
-      const removeButton = requiredNode<HTMLButtonElement>(`#${idPrefix}-remove-${field}`);
-      removeButton.addEventListener('click', () => {
-        state[field] = '';
-        render();
-      });
-    });
-
-    const available = availableFieldsToAdd(active);
-    hosts.addMenu.innerHTML = available
-      .map((field) => {
-        const meta = SYMPTOM_META[field];
-        return `<button type="button" class="add-symptom-option" id="${idPrefix}-option-${field}">${meta.emoji} ${escapeHtml(meta.name)}</button>`;
-      })
-      .join('');
-    available.forEach((field) => {
-      const optionButton = requiredNode<HTMLButtonElement>(`#${idPrefix}-option-${field}`);
-      optionButton.addEventListener('click', () => {
-        state[field] = '0';
-        hosts.addMenu.classList.add('hidden');
-        render();
-      });
-    });
-
-    hosts.addButton.disabled = available.length === 0;
-    if (available.length === 0) {
-      hosts.addMenu.classList.add('hidden');
+function assertNoOverlap(startDate: string, endDate: string, ignoreStart?: string): void {
+  const overlapping = listPeriodSpans(latestEntries).find((period) => {
+    if (ignoreStart && period.startDate === ignoreStart) {
+      return false;
     }
+    return rangesOverlap(startDate, endDate, period.startDate, effectiveEnd(period));
+  });
+
+  if (overlapping) {
+    throw new Error('That date range overlaps another logged period.');
+  }
+}
+
+async function persistPeriod(startDate: string, endDate: string | null): Promise<void> {
+  const entry = normalizeEntry(toPeriodEntry(startDate, endDate));
+  if (!entry.date) {
+    throw new Error('A valid date is required.');
+  }
+  await saveEntry(entry);
+}
+
+async function removePeriodRows(period: PeriodSpan): Promise<void> {
+  const record = latestEntries.find((entry) => entry.date === period.startDate && isPeriodRecord(entry));
+  if (record) {
+    await deleteEntry(period.startDate);
+    return;
   }
 
-  render();
+  const end = effectiveEnd(period);
+  const dates = latestEntries
+    .filter((entry) => entry.date >= period.startDate && entry.date <= end && Number.parseInt(entry.krvaceni, 10) > 0)
+    .map((entry) => entry.date);
 
-  return {
-    readValues: () => ({ ...state })
-  };
+  for (const date of dates) {
+    await deleteEntry(date);
+  }
 }
 
-function wireAddMenuToggle(hosts: SymptomFormHosts): void {
-  hosts.addButton.addEventListener('click', () => {
-    hosts.addMenu.classList.toggle('hidden');
-  });
+function updateActionPanel(entries: Entry[]): void {
+  const open = findOpenPeriod(listPeriodSpans(entries));
+  startButton.disabled = Boolean(open);
+  endButton.disabled = !open;
+
+  if (open) {
+    periodStatus.textContent = `Period in progress since ${formatDate(open.startDate)}.`;
+  } else {
+    periodStatus.textContent = 'No period in progress.';
+  }
 }
 
-function symptomFormHosts(idPrefix: string): SymptomFormHosts {
-  return {
-    krvaceniHost: requiredNode<HTMLElement>(`#${idPrefix}-krvaceni-host`),
-    optionalHost: requiredNode<HTMLElement>(`#${idPrefix}-optional-host`),
-    addButton: requiredNode<HTMLButtonElement>(`#${idPrefix}-add-btn`),
-    addMenu: requiredNode<HTMLElement>(`#${idPrefix}-add-menu`)
-  };
-}
-
-const addFormHosts = symptomFormHosts('add');
-wireAddMenuToggle(addFormHosts);
-let addSymptomForm = createSymptomForm('add', addFormHosts, {});
-
-addDate.value = todayLocalIsoDate();
-
-addForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  addError.classList.add('hidden');
-  addSubmit.disabled = true;
-  addSubmit.textContent = 'Saving...';
+startButton.addEventListener('click', async () => {
+  clearFormError();
+  startButton.disabled = true;
+  startButton.textContent = 'Saving...';
 
   try {
-    const formData = new FormData(addForm);
-    const symptomValues = addSymptomForm.readValues();
-    const entry = normalizeEntry({
-      date: addDate.value,
-      krvaceni: symptomValues.krvaceni,
-      nalady: symptomValues.nalady,
-      tlak: symptomValues.tlak,
-      nadymani: symptomValues.nadymani,
-      energie: symptomValues.energie,
-      notes: String(formData.get('notes') ?? '')
-    });
+    const open = findOpenPeriod(listPeriodSpans(latestEntries));
+    if (open) {
+      throw new Error('End the current period before starting a new one.');
+    }
 
-    await saveEntry(entry);
-    addForm.reset();
-    addSymptomForm = createSymptomForm('add', addFormHosts, {});
-    addDate.value = todayLocalIsoDate();
+    const startDate = actionDate.value;
+    if (!startDate) {
+      throw new Error('A valid date is required.');
+    }
+
+    assertNoOverlap(startDate, startDate);
+    await persistPeriod(startDate, null);
     await refreshEntries();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    addError.textContent = message;
-    addError.classList.remove('hidden');
+    showFormError(message);
+    updateActionPanel(latestEntries);
   } finally {
-    addSubmit.disabled = false;
-    addSubmit.textContent = 'Save entry';
+    startButton.textContent = 'Start period';
+  }
+});
+
+endButton.addEventListener('click', async () => {
+  clearFormError();
+  endButton.disabled = true;
+  endButton.textContent = 'Saving...';
+
+  try {
+    const open = findOpenPeriod(listPeriodSpans(latestEntries));
+    if (!open) {
+      throw new Error('No period is in progress.');
+    }
+
+    const endDate = actionDate.value;
+    if (!endDate) {
+      throw new Error('A valid date is required.');
+    }
+
+    if (endDate < open.startDate) {
+      throw new Error('End date cannot be before the start date.');
+    }
+
+    assertNoOverlap(open.startDate, endDate, open.startDate);
+    await persistPeriod(open.startDate, endDate);
+    actionDate.value = todayLocalIsoDate();
+    await refreshEntries();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    showFormError(message);
+    updateActionPanel(latestEntries);
+  } finally {
+    endButton.textContent = 'End period';
   }
 });
 
@@ -253,78 +204,72 @@ function setStatus(message: string, kind: 'info' | 'error' | 'success'): void {
   }
 }
 
+function durationText(period: PeriodSpan): string {
+  const end = period.endDate ?? todayLocalIsoDate();
+  const start = new Date(`${period.startDate}T00:00:00`);
+  const finish = new Date(`${end}T00:00:00`);
+  const days = Math.round((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const label = days === 1 ? '1 day' : `${Math.max(days, 1)} days`;
+  return period.open ? `${label} so far` : label;
+}
 
-function renderEntries(entries: Entry[]): void {
-  if (entries.length === 0) {
-    entriesNode.innerHTML = '<p class="empty">No entries yet.</p>';
+function renderPeriods(entries: Entry[]): void {
+  latestEntries = entries;
+  updateActionPanel(entries);
+
+  const periods = listPeriodSpans(entries).slice().reverse();
+  if (periods.length === 0) {
+    entriesNode.innerHTML = '<p class="empty">No periods yet. Tap Start period to log one.</p>';
     return;
   }
 
-  const periodGroups = assignPeriodGroups(entries);
-  const editSymptomForms = new Map<string, { readValues: () => SymptomFormValues }>();
-
-  entriesNode.innerHTML = entries
-    .map((entry, index) => {
-      const groupId = periodGroups[entry.date];
-      const inPeriod = groupId !== undefined;
-      const prevGroupId = index > 0 ? periodGroups[entries[index - 1]?.date ?? ''] : undefined;
-      const nextGroupId = index < entries.length - 1 ? periodGroups[entries[index + 1]?.date ?? ''] : undefined;
-      const connectsAbove = inPeriod && prevGroupId === groupId;
-      const connectsBelow = inPeriod && nextGroupId === groupId;
-      const railClasses = [
-        'period-rail',
-        inPeriod ? 'in-period' : '',
-        connectsAbove ? 'connects-above' : '',
-        connectsBelow ? 'connects-below' : ''
-      ].filter(Boolean).join(' ');
-
-      const activeMetrics = activeOptionalFields(entry);
-      const metricsMarkup = [REQUIRED_FIELD, ...activeMetrics]
-        .map((field) => `<li>${SYMPTOM_META[field].name}: ${escapeHtml(getSymptomLabel(field, entry[field]))}</li>`)
-        .join('');
+  entriesNode.innerHTML = periods
+    .map((period) => {
+      const range = period.open
+        ? `${escapeHtml(formatDate(period.startDate))} – now`
+        : `${escapeHtml(formatDate(period.startDate))} – ${escapeHtml(formatDate(period.endDate ?? period.startDate))}`;
+      const openBadge = period.open ? '<span class="open-badge">In progress</span>' : '';
 
       return `
-        <div class="entry-row">
-          <div class="${railClasses}">${inPeriod ? '<span class="period-dot"></span>' : ''}</div>
-          <article class="entry-card" data-date="${escapeHtml(entry.date)}">
+        <article class="entry-card" data-start="${escapeHtml(period.startDate)}">
           <div class="entry-view">
             <div class="entry-header">
-              <strong>${escapeHtml(formatDate(entry.date))}</strong>
+              <strong>${range}</strong>
               <div class="entry-actions">
-                <button type="button" class="edit-btn" data-date="${escapeHtml(entry.date)}">Upravit</button>
-                <button type="button" class="delete-btn" data-date="${escapeHtml(entry.date)}">Smazat</button>
+                <button type="button" class="edit-btn" data-start="${escapeHtml(period.startDate)}">Edit</button>
+                <button type="button" class="delete-btn" data-start="${escapeHtml(period.startDate)}">Delete</button>
               </div>
             </div>
-            <ul class="entry-metrics">${metricsMarkup}</ul>
-            ${entry.notes ? `<p class="notes">${escapeHtml(entry.notes)}</p>` : ''}
+            <p class="period-range">${escapeHtml(durationText(period))} ${openBadge}</p>
           </div>
           <div class="entry-edit hidden">
-            <input type="date" id="edit-${escapeHtml(entry.date)}-date" value="${escapeHtml(entry.date)}" aria-label="Date" required />
-            ${symptomFormMarkup(`edit-${escapeHtml(entry.date)}`)}
-            <textarea id="edit-${escapeHtml(entry.date)}-notes" rows="3" aria-label="Notes">${escapeHtml(entry.notes)}</textarea>
+            <label>
+              Start
+              <input type="date" class="edit-start" value="${escapeHtml(period.startDate)}" required />
+            </label>
+            <label>
+              End
+              <input type="date" class="edit-end" value="${escapeHtml(period.endDate ?? '')}" ${period.open ? '' : 'required'} />
+            </label>
             <div class="form-actions">
-              <button type="button" class="btn-save" data-date="${escapeHtml(entry.date)}">Uložit</button>
-              <button type="button" class="btn-cancel" data-date="${escapeHtml(entry.date)}">Zrušit</button>
+              <button type="button" class="btn-save" data-start="${escapeHtml(period.startDate)}">Save</button>
+              <button type="button" class="btn-cancel" data-start="${escapeHtml(period.startDate)}">Cancel</button>
             </div>
             <p class="edit-error hidden"></p>
           </div>
-          </article>
-        </div>
+        </article>
       `;
     })
     .join('');
 
-  entries.forEach((entry) => {
-    wireAddMenuToggle(symptomFormHosts(`edit-${entry.date}`));
-  });
-
   entriesNode.querySelectorAll<HTMLButtonElement>('.delete-btn').forEach((button) => {
     button.addEventListener('click', async () => {
-      const date = button.dataset.date ?? '';
-      if (!date) return;
+      const start = button.dataset.start ?? '';
+      const period = listPeriodSpans(latestEntries).find((item) => item.startDate === start);
+      if (!period) return;
 
       try {
-        await deleteEntry(date);
+        await removePeriodRows(period);
         await refreshEntries();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -335,74 +280,57 @@ function renderEntries(entries: Entry[]): void {
 
   entriesNode.querySelectorAll<HTMLButtonElement>('.edit-btn').forEach((button) => {
     button.addEventListener('click', () => {
-      const date = button.dataset.date ?? '';
-      const card = entriesNode.querySelector<HTMLElement>(`.entry-card[data-date="${date}"]`);
-      if (!card) return;
-
-      const entry = entries.find((item) => item.date === date);
-      if (!entry) return;
-
-      const idPrefix = `edit-${date}`;
-      editSymptomForms.set(date, createSymptomForm(idPrefix, symptomFormHosts(idPrefix), {
-        krvaceni: entry.krvaceni,
-        nalady: entry.nalady,
-        tlak: entry.tlak,
-        nadymani: entry.nadymani,
-        energie: entry.energie
-      }));
-
-      card.querySelector('.entry-view')?.classList.add('hidden');
-      card.querySelector('.entry-edit')?.classList.remove('hidden');
+      const card = button.closest('.entry-card');
+      card?.querySelector('.entry-view')?.classList.add('hidden');
+      card?.querySelector('.entry-edit')?.classList.remove('hidden');
     });
   });
 
   entriesNode.querySelectorAll<HTMLButtonElement>('.btn-cancel').forEach((button) => {
     button.addEventListener('click', () => {
-      const date = button.dataset.date ?? '';
-      const card = entriesNode.querySelector<HTMLElement>(`.entry-card[data-date="${date}"]`);
-      if (!card) return;
-
-      card.querySelector('.entry-view')?.classList.remove('hidden');
-      card.querySelector('.entry-edit')?.classList.add('hidden');
-      card.querySelector('.edit-error')?.classList.add('hidden');
+      const card = button.closest('.entry-card');
+      card?.querySelector('.entry-view')?.classList.remove('hidden');
+      card?.querySelector('.entry-edit')?.classList.add('hidden');
+      card?.querySelector('.edit-error')?.classList.add('hidden');
     });
   });
 
   entriesNode.querySelectorAll<HTMLButtonElement>('.btn-save').forEach((button) => {
     button.addEventListener('click', async () => {
-      const originalDate = button.dataset.date ?? '';
-      if (!originalDate) return;
+      const originalStart = button.dataset.start ?? '';
+      const card = button.closest('.entry-card');
+      if (!originalStart || !card) return;
 
-      const symptomForm = editSymptomForms.get(originalDate);
-      const errorEl = requiredNode<HTMLElement>(`#edit-${originalDate}-krvaceni-host`).closest('.entry-edit')
-        ?.querySelector<HTMLElement>('.edit-error');
-      const dateField = requiredNode<HTMLInputElement>(`#edit-${originalDate}-date`);
-      const notesField = requiredNode<HTMLTextAreaElement>(`#edit-${originalDate}-notes`);
+      const errorEl = card.querySelector<HTMLElement>('.edit-error');
+      const startField = card.querySelector<HTMLInputElement>('.edit-start');
+      const endField = card.querySelector<HTMLInputElement>('.edit-end');
+      if (!startField || !endField) return;
 
       button.disabled = true;
-      button.textContent = 'Ukládám...';
+      button.textContent = 'Saving...';
       errorEl?.classList.add('hidden');
 
       try {
-        if (!symptomForm) {
-          throw new Error('Symptom form not initialized');
+        const nextStart = startField.value;
+        const nextEnd = endField.value.trim() === '' ? null : endField.value;
+
+        if (!nextStart) {
+          throw new Error('A valid start date is required.');
         }
 
-        const symptomValues = symptomForm.readValues();
-        const entry = normalizeEntry({
-          date: dateField.value,
-          krvaceni: symptomValues.krvaceni,
-          nalady: symptomValues.nalady,
-          tlak: symptomValues.tlak,
-          nadymani: symptomValues.nadymani,
-          energie: symptomValues.energie,
-          notes: notesField.value
-        });
-
-        if (entry.date !== originalDate) {
-          await deleteEntry(originalDate);
+        if (nextEnd && nextEnd < nextStart) {
+          throw new Error('End date cannot be before the start date.');
         }
-        await saveEntry(entry);
+
+        assertNoOverlap(nextStart, nextEnd ?? nextStart, originalStart);
+
+        const original = listPeriodSpans(latestEntries).find((item) => item.startDate === originalStart);
+        if (original) {
+          await removePeriodRows(original);
+        } else {
+          await deleteEntry(originalStart);
+        }
+        await persistPeriod(nextStart, nextEnd);
         await refreshEntries();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -411,7 +339,7 @@ function renderEntries(entries: Entry[]): void {
           errorEl.classList.remove('hidden');
         }
         button.disabled = false;
-        button.textContent = 'Uložit';
+        button.textContent = 'Save';
       }
     });
   });
@@ -485,14 +413,10 @@ function renderPrediction(entries: Entry[]): void {
       <button type="button" class="info-btn" id="prediction-info-btn" aria-label="How is this calculated?">ⓘ</button>
     </div>
     <div class="info-panel hidden" id="prediction-info-panel">
-      <p>The calculation only needs two dates per period: the first day you log
-      bleeding (Intenzita &gt; 0) and the last day before it stops. Everything else
-      is derived from those start/end dates, so log at least those two days each
-      period, and at least two full periods before a prediction appears.</p>
-      <p>Next period is estimated from the average length of your last logged cycles.
-      Ovulation is estimated 14 days before that date, not from the midpoint of the cycle,
-      because the luteal phase (after ovulation) stays fairly constant per person, while the
-      follicular phase (before ovulation) is what actually varies.</p>
+      <p>Each period is a start date and an optional end date. Next period is estimated from the
+      average length of your last logged cycles. Ovulation is estimated 14 days before that date,
+      because the luteal phase stays fairly constant while the follicular phase is what varies.</p>
+      <p>Older daily bleeding logs still count as periods, so existing history is included.</p>
     </div>
     ${prediction ? `
       <p class="prediction-headline">${escapeHtml(daysUntilText)}</p>
@@ -521,7 +445,7 @@ async function refreshEntries(): Promise<void> {
   try {
     const { entries, diagnostics } = await fetchEntries();
     saveCache(entries);
-    renderEntries(entries);
+    renderPeriods(entries);
     renderPrediction(entries);
     setStatus('Entries loaded.', 'success');
     renderDebug(diagnostics);
@@ -531,7 +455,7 @@ async function refreshEntries(): Promise<void> {
 
     if (cached && cached.entries.length > 0) {
       setStatus('Offline mode. Showing cached entries.', 'error');
-      renderEntries(cached.entries);
+      renderPeriods(cached.entries);
       renderPrediction(cached.entries);
       renderDebug({
         endpoint: APP_CONFIG.apiUrlPrimary,
@@ -577,7 +501,7 @@ async function bootstrap(): Promise<void> {
   const splashStartedAt = Date.now();
   const cached = loadCache();
   if (cached && cached.entries.length > 0) {
-    renderEntries(cached.entries);
+    renderPeriods(cached.entries);
     renderPrediction(cached.entries);
     setStatus(`Showing cached data (${cacheAgeText(cached.ageMs)}), refreshing...`, 'info');
     renderDebug({
@@ -614,7 +538,6 @@ function setupUpdatePrompt(): void {
     registration = reg;
   });
 
-  // iOS home-screen PWAs stay in one long-lived session, so nudge checks on interval + resume.
   setInterval(() => {
     registration?.update();
   }, UPDATE_CHECK_INTERVAL_MS);
@@ -663,4 +586,3 @@ function setupUpdatePrompt(): void {
 
 setupUpdatePrompt();
 bootstrap();
-

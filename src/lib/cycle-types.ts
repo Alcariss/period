@@ -21,3 +21,9 @@ export type PeriodPrediction = {
   ovulationEstimateDate: string;
   stats: CycleStats;
 };
+
+export type PeriodSpan = {
+  startDate: string;
+  endDate: string | null;
+  open: boolean;
+};
