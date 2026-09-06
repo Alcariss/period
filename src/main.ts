@@ -9,6 +9,29 @@ import { findOpenPeriod, isPeriodRecord, rangesOverlap, toPeriodEntry } from './
 import type { PeriodSpan } from './lib/cycle-types';
 import type { Diagnostics, Entry } from './types';
 
+const PERIOD_START_PHRASES = [
+  'Be gentle with yourself these next few days. 💕',
+  "You've got this — one day at a time.",
+  'Rest when you need to, you deserve it.',
+  'Comfort first. The rest can wait.',
+  'Your body is doing important work — take it easy.',
+  'A warm drink and a slow morning sound good right now.'
+];
+
+const PERIOD_END_PHRASES = [
+  'Nice work — you made it through! 🌸',
+  "Here's to feeling lighter and brighter.",
+  'You showed up for yourself this cycle.',
+  'Onward, with a little more energy each day.',
+  'Well done taking care of yourself.',
+  'Hope the next stretch feels easier.'
+];
+
+function randomPhrase(phrases: readonly string[]): string {
+  const index = Math.floor(Math.random() * phrases.length);
+  return phrases[index] ?? phrases[0] ?? '';
+}
+
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) {
   throw new Error('App mount node not found');
@@ -118,13 +141,32 @@ async function removePeriodRows(period: PeriodSpan): Promise<void> {
   }
 }
 
+const MAX_BLEEDING_DAY_DOTS = 10;
+
+function periodDayCount(period: PeriodSpan): number {
+  const end = period.endDate ?? todayLocalIsoDate();
+  const start = new Date(`${period.startDate}T00:00:00`);
+  const finish = new Date(`${end}T00:00:00`);
+  const days = Math.round((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(days, 1);
+}
+
+function bleedingDayDotsHtml(dayCount: number): string {
+  const visibleCount = Math.min(dayCount, MAX_BLEEDING_DAY_DOTS);
+  const dots = Array.from({ length: visibleCount }, () => '<span class="bleeding-dot"></span>').join('');
+  const overflow =
+    dayCount > MAX_BLEEDING_DAY_DOTS ? `<span class="bleeding-dot-overflow">+${dayCount - MAX_BLEEDING_DAY_DOTS}</span>` : '';
+  return `<span class="bleeding-dots" aria-label="${dayCount} day${dayCount === 1 ? '' : 's'} of bleeding">${dots}${overflow}</span>`;
+}
+
 function updateActionPanel(entries: Entry[]): void {
   const open = findOpenPeriod(listPeriodSpans(entries));
   startButton.disabled = Boolean(open);
   endButton.disabled = !open;
 
   if (open) {
-    periodStatus.textContent = `Period in progress since ${formatDate(open.startDate)}.`;
+    const dayCount = periodDayCount(open);
+    periodStatus.innerHTML = `Period in progress since ${escapeHtml(formatDate(open.startDate))}. ${bleedingDayDotsHtml(dayCount)}`;
   } else {
     periodStatus.textContent = 'No period in progress.';
   }
@@ -149,6 +191,7 @@ startButton.addEventListener('click', async () => {
     assertNoOverlap(startDate, startDate);
     await persistPeriod(startDate, null);
     await refreshEntries();
+    setStatus(randomPhrase(PERIOD_START_PHRASES), 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     showFormError(message);
@@ -182,6 +225,7 @@ endButton.addEventListener('click', async () => {
     await persistPeriod(open.startDate, endDate);
     actionDate.value = todayLocalIsoDate();
     await refreshEntries();
+    setStatus(randomPhrase(PERIOD_END_PHRASES), 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     showFormError(message);
@@ -207,11 +251,8 @@ function setStatus(message: string, kind: 'info' | 'error' | 'success'): void {
 }
 
 function durationText(period: PeriodSpan): string {
-  const end = period.endDate ?? todayLocalIsoDate();
-  const start = new Date(`${period.startDate}T00:00:00`);
-  const finish = new Date(`${end}T00:00:00`);
-  const days = Math.round((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const label = days === 1 ? '1 day' : `${Math.max(days, 1)} days`;
+  const days = periodDayCount(period);
+  const label = days === 1 ? '1 day' : `${days} days`;
 
   if (period.open) {
     return `${label} so far`;
@@ -509,21 +550,7 @@ async function refreshEntries(): Promise<void> {
   }
 }
 
-const SPLASH_MIN_VISIBLE_MS = 900;
-const SPLASH_FADE_MS = 600;
-
-function hideSplash(): void {
-  const splash = document.querySelector<HTMLElement>('#splash');
-  if (!splash) {
-    return;
-  }
-
-  splash.classList.add('splash-hide');
-  setTimeout(() => splash.remove(), SPLASH_FADE_MS);
-}
-
 async function bootstrap(): Promise<void> {
-  const splashStartedAt = Date.now();
   const cached = loadCache();
   if (cached && cached.entries.length > 0) {
     renderPeriods(cached.entries);
@@ -541,13 +568,6 @@ async function bootstrap(): Promise<void> {
   }
 
   await refreshEntries();
-
-  const elapsedMs = Date.now() - splashStartedAt;
-  const remainingMs = SPLASH_MIN_VISIBLE_MS - elapsedMs;
-  if (remainingMs > 0) {
-    await new Promise((resolve) => setTimeout(resolve, remainingMs));
-  }
-  hideSplash();
 }
 
 function setupUpdatePrompt(): void {
