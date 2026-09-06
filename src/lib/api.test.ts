@@ -27,7 +27,10 @@ describe('fetchEntries', () => {
           tlak: '0',
           nadymani: '0',
           energie: '1',
-          notes: ''
+          notes: '',
+          periodStart: '',
+          periodEnd: '',
+          periodNotes: ''
         }
       ],
       meta: {

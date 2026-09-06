@@ -29,4 +29,5 @@ export type PeriodSpan = {
   endDate: string | null;
   open: boolean;
   endDateConfidence: PeriodEndDateConfidence;
+  summary: string;
 };

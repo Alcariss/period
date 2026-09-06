@@ -15,7 +15,10 @@ function toEntries(rows: Entry[]): Entry[] {
     tlak: row.tlak,
     nadymani: row.nadymani,
     energie: row.energie,
-    notes: row.notes
+    notes: row.notes,
+    periodStart: row.periodStart ?? '',
+    periodEnd: row.periodEnd ?? '',
+    periodNotes: row.periodNotes ?? ''
   }));
 }
 
@@ -97,6 +100,9 @@ export async function saveEntry(input: NewEntry): Promise<Entry> {
   url.searchParams.set('nadymani', input.nadymani ?? '0');
   url.searchParams.set('energie', input.energie ?? '0');
   url.searchParams.set('notes', input.notes ?? '');
+  url.searchParams.set('periodStart', input.periodStart ?? '');
+  url.searchParams.set('periodEnd', input.periodEnd ?? '');
+  url.searchParams.set('periodNotes', input.periodNotes ?? '');
   appendToken(url);
 
   const response = await fetch(url.toString(), {

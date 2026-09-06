@@ -72,6 +72,9 @@ export function normalizeEntry(rawEntry: Partial<NewEntry>): Entry {
     tlak: clampOptionalSymptomValue(rawEntry.tlak, SYMPTOM_LIMITS.tlak ?? 0),
     nadymani: clampOptionalSymptomValue(rawEntry.nadymani, SYMPTOM_LIMITS.nadymani ?? 0),
     energie: clampOptionalSymptomValue(rawEntry.energie, SYMPTOM_LIMITS.energie ?? 0),
-    notes: typeof rawEntry.notes === 'string' ? rawEntry.notes.trim() : ''
+    notes: typeof rawEntry.notes === 'string' ? rawEntry.notes.trim() : '',
+    periodStart: rawEntry.periodStart ? normalizeDate(rawEntry.periodStart) : '',
+    periodEnd: rawEntry.periodEnd ? normalizeDate(rawEntry.periodEnd) : '',
+    periodNotes: typeof rawEntry.periodNotes === 'string' ? rawEntry.periodNotes.trim() : ''
   };
 }

@@ -101,6 +101,19 @@ button, input, textarea {
   margin-top: 16px;
 }
 
+.period-notes-field {
+  display: block;
+  margin-top: 14px;
+  font-weight: 600;
+}
+
+.period-summary {
+  margin: 4px 0 0;
+  color: #7a5c6a;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 .btn-end {
   background: #fff;
   color: #db5a8c;

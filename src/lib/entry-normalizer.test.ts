@@ -26,7 +26,10 @@ describe('entry normalizer', () => {
       tlak: '',
       nadymani: '3',
       energie: '3',
-      notes: 'tired'
+      notes: 'tired',
+      periodStart: '',
+      periodEnd: '',
+      periodNotes: ''
     });
   });
 

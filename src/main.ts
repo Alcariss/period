@@ -64,6 +64,10 @@ app.innerHTML = `
         <button type="button" id="start-period">Start period</button>
         <button type="button" id="end-period" class="btn-end">End period</button>
       </div>
+      <label id="period-notes-field" class="period-notes-field hidden">
+        How did this period feel? (optional)
+        <textarea id="period-notes" maxlength="200" rows="2"></textarea>
+      </label>
       <p id="add-error" class="form-error hidden"></p>
     </section>
 
@@ -83,6 +87,8 @@ const periodStatus = requiredNode<HTMLElement>('#period-status');
 const actionDate = requiredNode<HTMLInputElement>('#action-date');
 const startButton = requiredNode<HTMLButtonElement>('#start-period');
 const endButton = requiredNode<HTMLButtonElement>('#end-period');
+const periodNotesField = requiredNode<HTMLElement>('#period-notes-field');
+const periodNotesInput = requiredNode<HTMLTextAreaElement>('#period-notes');
 const addError = requiredNode<HTMLElement>('#add-error');
 
 actionDate.value = todayLocalIsoDate();
@@ -116,8 +122,8 @@ function assertNoOverlap(startDate: string, endDate: string, ignoreStart?: strin
   }
 }
 
-async function persistPeriod(startDate: string, endDate: string | null): Promise<void> {
-  const entry = normalizeEntry(toPeriodEntry(startDate, endDate));
+async function persistPeriod(startDate: string, endDate: string | null, summary = ''): Promise<void> {
+  const entry = normalizeEntry(toPeriodEntry(startDate, endDate, summary));
   if (!entry.date) {
     throw new Error('A valid date is required.');
   }
@@ -163,12 +169,14 @@ function updateActionPanel(entries: Entry[]): void {
   const open = findOpenPeriod(listPeriodSpans(entries));
   startButton.disabled = Boolean(open);
   endButton.disabled = !open;
+  periodNotesField.classList.toggle('hidden', !open);
 
   if (open) {
     const dayCount = periodDayCount(open);
     periodStatus.innerHTML = `Period in progress since ${escapeHtml(formatDate(open.startDate))}. ${bleedingDayDotsHtml(dayCount)}`;
   } else {
     periodStatus.textContent = 'No period in progress.';
+    periodNotesInput.value = '';
   }
 }
 
@@ -222,8 +230,9 @@ endButton.addEventListener('click', async () => {
     }
 
     assertNoOverlap(open.startDate, endDate, open.startDate);
-    await persistPeriod(open.startDate, endDate);
+    await persistPeriod(open.startDate, endDate, periodNotesInput.value.trim());
     actionDate.value = todayLocalIsoDate();
+    periodNotesInput.value = '';
     await refreshEntries();
     setStatus(randomPhrase(PERIOD_END_PHRASES), 'success');
   } catch (error) {
@@ -305,6 +314,7 @@ function renderPeriods(entries: Entry[]): void {
               </div>
             </div>
             <p class="period-range">${escapeHtml(durationText(period))} ${openBadge}</p>
+            ${period.summary ? `<p class="period-summary">${escapeHtml(period.summary)}</p>` : ''}
           </div>
           <div class="entry-edit hidden">
             <label>
@@ -314,6 +324,10 @@ function renderPeriods(entries: Entry[]): void {
             <label>
               End
               <input type="date" class="edit-end" value="${escapeHtml(period.endDate ?? '')}" ${period.open ? '' : 'required'} />
+            </label>
+            <label>
+              How did it feel? (optional)
+              <textarea class="edit-summary" maxlength="200" rows="2">${escapeHtml(period.summary)}</textarea>
             </label>
             <div class="form-actions">
               <button type="button" class="btn-save" data-start="${escapeHtml(period.startDate)}">Save</button>
@@ -368,7 +382,8 @@ function renderPeriods(entries: Entry[]): void {
       const errorEl = card.querySelector<HTMLElement>('.edit-error');
       const startField = card.querySelector<HTMLInputElement>('.edit-start');
       const endField = card.querySelector<HTMLInputElement>('.edit-end');
-      if (!startField || !endField) return;
+      const summaryField = card.querySelector<HTMLTextAreaElement>('.edit-summary');
+      if (!startField || !endField || !summaryField) return;
 
       button.disabled = true;
       button.textContent = 'Saving...';
@@ -377,6 +392,7 @@ function renderPeriods(entries: Entry[]): void {
       try {
         const nextStart = startField.value;
         const nextEnd = endField.value.trim() === '' ? null : endField.value;
+        const nextSummary = summaryField.value.trim();
 
         if (!nextStart) {
           throw new Error('A valid start date is required.');
@@ -394,7 +410,7 @@ function renderPeriods(entries: Entry[]): void {
         } else {
           await deleteEntry(originalStart);
         }
-        await persistPeriod(nextStart, nextEnd);
+        await persistPeriod(nextStart, nextEnd, nextSummary);
         await refreshEntries();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

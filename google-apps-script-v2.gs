@@ -11,7 +11,10 @@ const FETCH_ERROR_CODES = {
   INTERNAL_ERROR: 'INTERNAL_ERROR'
 };
 
-const CANONICAL_COLUMN_ORDER = ['date', 'krvaceni', 'nalady', 'tlak', 'nadymani', 'energie', 'notes'];
+const CANONICAL_COLUMN_ORDER = [
+  'date', 'krvaceni', 'nalady', 'tlak', 'nadymani', 'energie', 'notes',
+  'period_start', 'period_end', 'period_notes'
+];
 
 const SYMPTOM_LIMITS = {
   krvaceni: 5,
@@ -130,7 +133,10 @@ function handleSave(params) {
     tlak: clampOptionalSymptom(params.tlak, SYMPTOM_LIMITS.tlak),
     nadymani: clampOptionalSymptom(params.nadymani, SYMPTOM_LIMITS.nadymani),
     energie: clampOptionalSymptom(params.energie, SYMPTOM_LIMITS.energie),
-    notes: String(params.notes || '').substring(0, 1000)
+    notes: String(params.notes || '').substring(0, 1000),
+    periodStart: String(params.periodStart || '').substring(0, 10),
+    periodEnd: String(params.periodEnd || '').substring(0, 10),
+    periodNotes: String(params.periodNotes || '').substring(0, 1000)
   };
 
   try {
@@ -159,7 +165,10 @@ function handleSave(params) {
       entry.tlak,
       entry.nadymani,
       entry.energie,
-      entry.notes
+      entry.notes,
+      entry.periodStart,
+      entry.periodEnd,
+      entry.periodNotes
     ];
 
     if (foundRow > 0) {
@@ -361,7 +370,10 @@ function mapRow(columnMap, row) {
     tlak: clampOptionalSymptom(row[columnMap.tlak], SYMPTOM_LIMITS.tlak),
     nadymani: clampOptionalSymptom(row[columnMap.nadymani], SYMPTOM_LIMITS.nadymani),
     energie: clampOptionalSymptom(row[columnMap.energie], SYMPTOM_LIMITS.energie),
-    notes: row[columnMap.notes] ? String(row[columnMap.notes]) : ''
+    notes: row[columnMap.notes] ? String(row[columnMap.notes]) : '',
+    periodStart: row[columnMap.period_start] ? formatDateToISO(row[columnMap.period_start]) : '',
+    periodEnd: row[columnMap.period_end] ? formatDateToISO(row[columnMap.period_end]) : '',
+    periodNotes: row[columnMap.period_notes] ? String(row[columnMap.period_notes]) : ''
   };
 }
 

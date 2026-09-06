@@ -6,6 +6,9 @@ export type Entry = {
   nadymani: string;
   energie: string;
   notes: string;
+  periodStart: string;
+  periodEnd: string;
+  periodNotes: string;
 };
 
 export type ApiMeta = {
@@ -38,6 +41,9 @@ export type NewEntry = {
   nadymani?: string;
   energie?: string;
   notes?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  periodNotes?: string;
 };
 
 export type Diagnostics = {

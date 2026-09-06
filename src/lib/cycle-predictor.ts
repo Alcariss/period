@@ -135,22 +135,30 @@ function buildPeriodSpans(entries: Entry[]): { spans: PeriodSpan[]; warnings: st
   const explicitStarts = new Set<string>();
 
   for (const entry of entries) {
-    const parsed = parsePeriodNotes(entry.notes);
-    if (!parsed || !entry.date) {
+    if (!entry.date) {
       continue;
     }
+
+    const hasColumnMarker = Boolean(entry.periodStart);
+    const legacyMarker = hasColumnMarker ? null : parsePeriodNotes(entry.notes);
+    if (!hasColumnMarker && !legacyMarker) {
+      continue;
+    }
+
+    const endDate = hasColumnMarker ? (entry.periodEnd || null) : (legacyMarker?.endDate ?? null);
 
     explicitStarts.add(entry.date);
     explicit.push({
       startDate: entry.date,
-      endDate: parsed.endDate,
-      open: parsed.endDate === null,
-      endDateConfidence: 'confirmed'
+      endDate,
+      open: endDate === null,
+      endDateConfidence: 'confirmed',
+      summary: hasColumnMarker ? entry.periodNotes : ''
     });
   }
 
-  const leftover = entries.filter((entry) => parsePeriodNotes(entry.notes) === null);
-  const legacy = groupIntoPeriods(leftover)
+  const leftover = entries.filter((entry) => !entry.periodStart && parsePeriodNotes(entry.notes) === null);
+  const legacySpans = groupIntoPeriods(leftover)
     .map((group) => {
       const first = group[0];
       const last = group[group.length - 1];
@@ -158,12 +166,13 @@ function buildPeriodSpans(entries: Entry[]): { spans: PeriodSpan[]; warnings: st
         startDate: first?.date ?? '',
         endDate: last?.date ?? first?.date ?? '',
         open: false,
-        endDateConfidence: 'inferred'
+        endDateConfidence: 'inferred',
+        summary: ''
       } satisfies PeriodSpan;
     })
     .filter((period) => period.startDate && !explicitStarts.has(period.startDate));
 
-  return resolveOverlaps([...legacy, ...explicit]);
+  return resolveOverlaps([...legacySpans, ...explicit]);
 }
 
 export function listPeriodSpans(entries: Entry[]): PeriodSpan[] {

@@ -12,7 +12,18 @@ import {
 import type { PeriodSpan } from './cycle-types';
 
 function entry(date: string, notes = ''): Entry {
-  return { date, krvaceni: '1', nalady: '', tlak: '', nadymani: '', energie: '', notes };
+  return {
+    date,
+    krvaceni: '1',
+    nalady: '',
+    tlak: '',
+    nadymani: '',
+    energie: '',
+    notes,
+    periodStart: '',
+    periodEnd: '',
+    periodNotes: ''
+  };
 }
 
 describe('period records', () => {
@@ -31,24 +42,39 @@ describe('period records', () => {
     expect(toPeriodEntry('2026-09-01', null)).toEqual({
       date: '2026-09-01',
       krvaceni: '1',
-      notes: '__period__:open'
+      notes: '',
+      periodStart: '2026-09-01',
+      periodEnd: '',
+      periodNotes: ''
+    });
+  });
+
+  it('builds a sheet row for a period end with an optional summary', () => {
+    expect(toPeriodEntry('2026-09-01', '2026-09-05', 'felt lighter this time')).toEqual({
+      date: '2026-09-01',
+      krvaceni: '1',
+      notes: '',
+      periodStart: '2026-09-01',
+      periodEnd: '2026-09-05',
+      periodNotes: 'felt lighter this time'
     });
   });
 
   it('detects period records', () => {
     expect(isPeriodRecord(entry('2026-09-01', '__period__:open'))).toBe(true);
     expect(isPeriodRecord(entry('2026-09-01', 'tired'))).toBe(false);
+    expect(isPeriodRecord({ ...entry('2026-09-01'), periodStart: '2026-09-01' })).toBe(true);
   });
 
   it('returns the latest open period', () => {
     const periods: PeriodSpan[] = [
-      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' },
-      { startDate: '2026-06-29', endDate: null, open: true, endDateConfidence: 'confirmed' }
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed', summary: '' },
+      { startDate: '2026-06-29', endDate: null, open: true, endDateConfidence: 'confirmed', summary: '' }
     ];
     expect(findOpenPeriod(periods)?.startDate).toBe('2026-06-29');
     expect(
       findOpenPeriod([
-        { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' }
+        { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed', summary: '' }
       ])
     ).toBeNull();
   });

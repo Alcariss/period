@@ -4,7 +4,27 @@ import { assignPeriodGroups, getCyclePhase, computeCycleStats, getPeriodSpanWarn
 import type { Entry } from '../types';
 
 function entry(date: string, krvaceni = '0'): Entry {
-  return { date, krvaceni, nalady: '0', tlak: '0', nadymani: '0', energie: '0', notes: '' };
+  return {
+    date,
+    krvaceni,
+    nalady: '0',
+    tlak: '0',
+    nadymani: '0',
+    energie: '0',
+    notes: '',
+    periodStart: '',
+    periodEnd: '',
+    periodNotes: ''
+  };
+}
+
+function periodMarkerEntry(startDate: string, endDate: string | null, summary = ''): Entry {
+  return {
+    ...entry(startDate, '1'),
+    periodStart: startDate,
+    periodEnd: endDate ?? '',
+    periodNotes: summary
+  };
 }
 
 function toLocalIsoDate(date: Date): string {
@@ -166,8 +186,8 @@ describe('listPeriodSpans', () => {
     ];
 
     expect(listPeriodSpans(entries)).toEqual([
-      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' },
-      { startDate: '2026-06-29', endDate: null, open: true, endDateConfidence: 'confirmed' }
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed', summary: '' },
+      { startDate: '2026-06-29', endDate: null, open: true, endDateConfidence: 'confirmed', summary: '' }
     ]);
   });
 
@@ -179,8 +199,8 @@ describe('listPeriodSpans', () => {
 
     const spans = listPeriodSpans(entries);
     expect(spans).toEqual([
-      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'inferred' },
-      { startDate: '2026-06-29', endDate: '2026-07-03', open: false, endDateConfidence: 'confirmed' }
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'inferred', summary: '' },
+      { startDate: '2026-06-29', endDate: '2026-07-03', open: false, endDateConfidence: 'confirmed', summary: '' }
     ]);
     expect(computeCycleStats(entries)?.averageCycleLengthDays).toBe(28);
   });
@@ -195,8 +215,8 @@ describe('listPeriodSpans', () => {
 
     const spans = listPeriodSpans(entries);
     expect(spans).toEqual([
-      { startDate: '2026-06-01', endDate: '2026-06-02', open: false, endDateConfidence: 'inferred' },
-      { startDate: '2026-06-29', endDate: '2026-06-30', open: false, endDateConfidence: 'inferred' }
+      { startDate: '2026-06-01', endDate: '2026-06-02', open: false, endDateConfidence: 'inferred', summary: '' },
+      { startDate: '2026-06-29', endDate: '2026-06-30', open: false, endDateConfidence: 'inferred', summary: '' }
     ]);
     expect(computeCycleStats(entries)?.averageCycleLengthDays).toBe(28);
   });
@@ -227,7 +247,7 @@ describe('listPeriodSpans', () => {
     ];
 
     const spans = listPeriodSpans(entries);
-    expect(spans).toEqual([{ startDate: '2026-06-02', endDate: '2026-06-06', open: false, endDateConfidence: 'confirmed' }]);
+    expect(spans).toEqual([{ startDate: '2026-06-02', endDate: '2026-06-06', open: false, endDateConfidence: 'confirmed', summary: '' }]);
     expect(getPeriodSpanWarnings(entries)).toEqual([
       'Ignored inferred period starting 2026-06-01: overlaps confirmed period starting 2026-06-02.'
     ]);
@@ -241,10 +261,46 @@ describe('listPeriodSpans', () => {
 
     const spans = listPeriodSpans(entries);
     expect(spans).toEqual([
-      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' }
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed', summary: '' }
     ]);
     expect(getPeriodSpanWarnings(entries)).toEqual([
       'Ignored period starting 2026-06-03: overlaps period starting 2026-06-01.'
+    ]);
+  });
+
+  it('reads start/end period records from the period_start/period_end/period_notes columns', () => {
+    const entries: Entry[] = [
+      periodMarkerEntry('2026-06-01', '2026-06-05', 'felt more tired than usual'),
+      periodMarkerEntry('2026-06-29', null)
+    ];
+
+    expect(listPeriodSpans(entries)).toEqual([
+      {
+        startDate: '2026-06-01',
+        endDate: '2026-06-05',
+        open: false,
+        endDateConfidence: 'confirmed',
+        summary: 'felt more tired than usual'
+      },
+      { startDate: '2026-06-29', endDate: null, open: true, endDateConfidence: 'confirmed', summary: '' }
+    ]);
+  });
+
+  it('prefers a column-based marker over a legacy bleeding group at the same start date', () => {
+    const entries: Entry[] = [
+      ...periodEntries('2026-06-01', 5),
+      periodMarkerEntry('2026-06-01', '2026-06-06', 'heavier than average')
+    ];
+
+    const spans = listPeriodSpans(entries);
+    expect(spans).toEqual([
+      {
+        startDate: '2026-06-01',
+        endDate: '2026-06-06',
+        open: false,
+        endDateConfidence: 'confirmed',
+        summary: 'heavier than average'
+      }
     ]);
   });
 });

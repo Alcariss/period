@@ -26,14 +26,17 @@ export function parsePeriodNotes(notes: string): { endDate: string | null } | nu
 }
 
 export function isPeriodRecord(entry: Entry): boolean {
-  return parsePeriodNotes(entry.notes) !== null;
+  return Boolean(entry.periodStart) || parsePeriodNotes(entry.notes) !== null;
 }
 
-export function toPeriodEntry(startDate: string, endDate: string | null): NewEntry {
+export function toPeriodEntry(startDate: string, endDate: string | null, summary = ''): NewEntry {
   return {
     date: startDate,
     krvaceni: '1',
-    notes: encodePeriodNotes(endDate)
+    notes: '',
+    periodStart: startDate,
+    periodEnd: endDate ?? '',
+    periodNotes: summary
   };
 }
 
