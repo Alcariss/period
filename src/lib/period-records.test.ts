@@ -42,11 +42,15 @@ describe('period records', () => {
 
   it('returns the latest open period', () => {
     const periods: PeriodSpan[] = [
-      { startDate: '2026-06-01', endDate: '2026-06-05', open: false },
-      { startDate: '2026-06-29', endDate: null, open: true }
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' },
+      { startDate: '2026-06-29', endDate: null, open: true, endDateConfidence: 'confirmed' }
     ];
     expect(findOpenPeriod(periods)?.startDate).toBe('2026-06-29');
-    expect(findOpenPeriod([{ startDate: '2026-06-01', endDate: '2026-06-05', open: false }])).toBeNull();
+    expect(
+      findOpenPeriod([
+        { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' }
+      ])
+    ).toBeNull();
   });
 
   it('detects overlapping date ranges', () => {

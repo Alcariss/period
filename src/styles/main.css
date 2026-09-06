@@ -282,6 +282,19 @@ button:disabled {
   display: none !important;
 }
 
+.data-warnings {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fdf3d9;
+  color: #7a5c00;
+  font-size: 0.9rem;
+}
+
+.data-warnings p {
+  margin: 4px 0;
+}
+
 #status {
   min-height: 20px;
   padding: 12px 16px;

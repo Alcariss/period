@@ -22,8 +22,11 @@ export type PeriodPrediction = {
   stats: CycleStats;
 };
 
+export type PeriodEndDateConfidence = 'confirmed' | 'inferred';
+
 export type PeriodSpan = {
   startDate: string;
   endDate: string | null;
   open: boolean;
+  endDateConfidence: PeriodEndDateConfidence;
 };

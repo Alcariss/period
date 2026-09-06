@@ -4,7 +4,7 @@ import { deleteEntry, fetchEntries, saveEntry } from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/format';
 import { normalizeEntry } from './lib/entry-normalizer';
-import { getCyclePhase, listPeriodSpans, predictNextPeriod } from './lib/cycle-predictor';
+import { getCyclePhase, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod } from './lib/cycle-predictor';
 import { findOpenPeriod, isPeriodRecord, rangesOverlap, toPeriodEntry } from './lib/period-records';
 import type { PeriodSpan } from './lib/cycle-types';
 import type { Diagnostics, Entry } from './types';
@@ -44,12 +44,14 @@ app.innerHTML = `
       <p id="add-error" class="form-error hidden"></p>
     </section>
 
+    <section id="data-warnings" class="data-warnings hidden"></section>
     <section id="status"></section>
     <section id="entries"></section>
     <section id="debug" class="debug"></section>
   </main>
 `;
 
+const dataWarningsNode = requiredNode<HTMLElement>('#data-warnings');
 const statusNode = requiredNode<HTMLElement>('#status');
 const entriesNode = requiredNode<HTMLElement>('#entries');
 const debugNode = requiredNode<HTMLElement>('#debug');
@@ -210,7 +212,28 @@ function durationText(period: PeriodSpan): string {
   const finish = new Date(`${end}T00:00:00`);
   const days = Math.round((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const label = days === 1 ? '1 day' : `${Math.max(days, 1)} days`;
-  return period.open ? `${label} so far` : label;
+
+  if (period.open) {
+    return `${label} so far`;
+  }
+
+  if (period.endDateConfidence === 'inferred') {
+    return `Started ${formatDate(period.startDate)}, last recorded ${formatDate(period.endDate ?? period.startDate)} (stop date not recorded)`;
+  }
+
+  return label;
+}
+
+function renderDataWarnings(entries: Entry[]): void {
+  const warnings = getPeriodSpanWarnings(entries);
+  if (warnings.length === 0) {
+    dataWarningsNode.innerHTML = '';
+    dataWarningsNode.classList.add('hidden');
+    return;
+  }
+
+  dataWarningsNode.classList.remove('hidden');
+  dataWarningsNode.innerHTML = warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join('');
 }
 
 function renderPeriods(entries: Entry[]): void {
@@ -447,6 +470,7 @@ async function refreshEntries(): Promise<void> {
     saveCache(entries);
     renderPeriods(entries);
     renderPrediction(entries);
+    renderDataWarnings(entries);
     setStatus('Entries loaded.', 'success');
     renderDebug(diagnostics);
   } catch (error) {
@@ -457,6 +481,7 @@ async function refreshEntries(): Promise<void> {
       setStatus('Offline mode. Showing cached entries.', 'error');
       renderPeriods(cached.entries);
       renderPrediction(cached.entries);
+      renderDataWarnings(cached.entries);
       renderDebug({
         endpoint: APP_CONFIG.apiUrlPrimary,
         source: 'cache',

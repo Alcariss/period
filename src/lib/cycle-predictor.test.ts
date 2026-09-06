@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assignPeriodGroups, getCyclePhase, computeCycleStats, listPeriodSpans, predictNextPeriod } from './cycle-predictor';
+import { assignPeriodGroups, getCyclePhase, computeCycleStats, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod } from './cycle-predictor';
 import type { Entry } from '../types';
 
 function entry(date: string, krvaceni = '0'): Entry {
@@ -166,8 +166,8 @@ describe('listPeriodSpans', () => {
     ];
 
     expect(listPeriodSpans(entries)).toEqual([
-      { startDate: '2026-06-01', endDate: '2026-06-05', open: false },
-      { startDate: '2026-06-29', endDate: null, open: true }
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' },
+      { startDate: '2026-06-29', endDate: null, open: true, endDateConfidence: 'confirmed' }
     ]);
   });
 
@@ -179,10 +179,73 @@ describe('listPeriodSpans', () => {
 
     const spans = listPeriodSpans(entries);
     expect(spans).toEqual([
-      { startDate: '2026-06-01', endDate: '2026-06-05', open: false },
-      { startDate: '2026-06-29', endDate: '2026-07-03', open: false }
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'inferred' },
+      { startDate: '2026-06-29', endDate: '2026-07-03', open: false, endDateConfidence: 'confirmed' }
     ]);
     expect(computeCycleStats(entries)?.averageCycleLengthDays).toBe(28);
+  });
+
+  it('keeps sparse legacy entries as separate episodes without a confirmed stop date', () => {
+    const entries: Entry[] = [
+      entry('2026-06-01', '2'),
+      entry('2026-06-02', '1'),
+      entry('2026-06-29', '2'),
+      entry('2026-06-30', '1')
+    ];
+
+    const spans = listPeriodSpans(entries);
+    expect(spans).toEqual([
+      { startDate: '2026-06-01', endDate: '2026-06-02', open: false, endDateConfidence: 'inferred' },
+      { startDate: '2026-06-29', endDate: '2026-06-30', open: false, endDateConfidence: 'inferred' }
+    ]);
+    expect(computeCycleStats(entries)?.averageCycleLengthDays).toBe(28);
+  });
+
+  it('treats a gap greater than 7 days as a new episode', () => {
+    const entries: Entry[] = [entry('2026-06-01', '1'), entry('2026-06-10', '1')];
+    const spans = listPeriodSpans(entries);
+    expect(spans).toHaveLength(2);
+    expect(spans[0]?.startDate).toBe('2026-06-01');
+    expect(spans[1]?.startDate).toBe('2026-06-10');
+  });
+
+  it('drops an explicit period whose end date is before its start date and warns', () => {
+    const entries: Entry[] = [{ ...entry('2026-06-01', '1'), notes: '__period__:2026-05-30' }];
+
+    expect(listPeriodSpans(entries)).toEqual([]);
+    expect(getPeriodSpanWarnings(entries)).toEqual([
+      'Ignored period starting 2026-06-01: end date is before the start date.'
+    ]);
+  });
+
+  it('resolves an overlap between an inferred legacy span and a confirmed explicit span', () => {
+    const entries: Entry[] = [
+      entry('2026-06-01', '2'),
+      entry('2026-06-02', '2'),
+      entry('2026-06-03', '2'),
+      { ...entry('2026-06-02', '1'), notes: '__period__:2026-06-06' }
+    ];
+
+    const spans = listPeriodSpans(entries);
+    expect(spans).toEqual([{ startDate: '2026-06-02', endDate: '2026-06-06', open: false, endDateConfidence: 'confirmed' }]);
+    expect(getPeriodSpanWarnings(entries)).toEqual([
+      'Ignored inferred period starting 2026-06-01: overlaps confirmed period starting 2026-06-02.'
+    ]);
+  });
+
+  it('warns and drops the later span when two explicit periods overlap', () => {
+    const entries: Entry[] = [
+      { ...entry('2026-06-01', '1'), notes: '__period__:2026-06-05' },
+      { ...entry('2026-06-03', '1'), notes: '__period__:2026-06-08' }
+    ];
+
+    const spans = listPeriodSpans(entries);
+    expect(spans).toEqual([
+      { startDate: '2026-06-01', endDate: '2026-06-05', open: false, endDateConfidence: 'confirmed' }
+    ]);
+    expect(getPeriodSpanWarnings(entries)).toEqual([
+      'Ignored period starting 2026-06-03: overlaps period starting 2026-06-01.'
+    ]);
   });
 });
 

@@ -1,6 +1,6 @@
 import type { Entry } from '../types';
 import type { CyclePhaseInfo, CyclePhaseName, CycleStats, PeriodPrediction, PeriodSpan } from './cycle-types';
-import { parsePeriodNotes } from './period-records';
+import { parsePeriodNotes, rangesOverlap } from './period-records';
 
 const SAME_PERIOD_MAX_GAP_DAYS = 7;
 const DEFAULT_PERIOD_LENGTH_DAYS = 5;
@@ -85,7 +85,52 @@ function groupIntoPeriods(entries: Entry[]): Entry[][] {
   return periods;
 }
 
-export function listPeriodSpans(entries: Entry[]): PeriodSpan[] {
+function effectiveEnd(period: PeriodSpan): string {
+  return period.endDate ?? period.startDate;
+}
+
+function resolveOverlaps(spans: PeriodSpan[]): { spans: PeriodSpan[]; warnings: string[] } {
+  const sorted = spans
+    .slice()
+    .sort((left, right) => toDate(left.startDate).getTime() - toDate(right.startDate).getTime());
+
+  const kept: PeriodSpan[] = [];
+  const warnings: string[] = [];
+
+  for (const candidate of sorted) {
+    if (candidate.endDate !== null && toDate(candidate.endDate).getTime() < toDate(candidate.startDate).getTime()) {
+      warnings.push(`Ignored period starting ${candidate.startDate}: end date is before the start date.`);
+      continue;
+    }
+
+    const conflict = kept.find((existing) =>
+      rangesOverlap(candidate.startDate, effectiveEnd(candidate), existing.startDate, effectiveEnd(existing))
+    );
+
+    if (!conflict) {
+      kept.push(candidate);
+      continue;
+    }
+
+    const candidateConfirmed = candidate.endDateConfidence === 'confirmed';
+    const conflictConfirmed = conflict.endDateConfidence === 'confirmed';
+
+    if (candidateConfirmed && !conflictConfirmed) {
+      kept.splice(kept.indexOf(conflict), 1, candidate);
+      warnings.push(
+        `Ignored inferred period starting ${conflict.startDate}: overlaps confirmed period starting ${candidate.startDate}.`
+      );
+    } else {
+      warnings.push(
+        `Ignored period starting ${candidate.startDate}: overlaps period starting ${conflict.startDate}.`
+      );
+    }
+  }
+
+  return { spans: kept, warnings };
+}
+
+function buildPeriodSpans(entries: Entry[]): { spans: PeriodSpan[]; warnings: string[] } {
   const explicit: PeriodSpan[] = [];
   const explicitStarts = new Set<string>();
 
@@ -99,7 +144,8 @@ export function listPeriodSpans(entries: Entry[]): PeriodSpan[] {
     explicit.push({
       startDate: entry.date,
       endDate: parsed.endDate,
-      open: parsed.endDate === null
+      open: parsed.endDate === null,
+      endDateConfidence: 'confirmed'
     });
   }
 
@@ -111,14 +157,21 @@ export function listPeriodSpans(entries: Entry[]): PeriodSpan[] {
       return {
         startDate: first?.date ?? '',
         endDate: last?.date ?? first?.date ?? '',
-        open: false
+        open: false,
+        endDateConfidence: 'inferred'
       } satisfies PeriodSpan;
     })
     .filter((period) => period.startDate && !explicitStarts.has(period.startDate));
 
-  return [...legacy, ...explicit].sort(
-    (left, right) => toDate(left.startDate).getTime() - toDate(right.startDate).getTime()
-  );
+  return resolveOverlaps([...legacy, ...explicit]);
+}
+
+export function listPeriodSpans(entries: Entry[]): PeriodSpan[] {
+  return buildPeriodSpans(entries).spans;
+}
+
+export function getPeriodSpanWarnings(entries: Entry[]): string[] {
+  return buildPeriodSpans(entries).warnings;
 }
 
 function spanStart(period: PeriodSpan): Date {
