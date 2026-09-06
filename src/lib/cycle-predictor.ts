@@ -130,6 +130,16 @@ function resolveOverlaps(spans: PeriodSpan[]): { spans: PeriodSpan[]; warnings: 
   return { spans: kept, warnings };
 }
 
+function collectLegacySummary(entries: Entry[], startDate: string, endDate: string): string {
+  const notesInRange = entries
+    .filter((entry) => entry.date >= startDate && entry.date <= endDate)
+    .map((entry) => entry.notes.trim())
+    .filter((text) => text.length > 0);
+
+  const deduped = notesInRange.filter((text, index) => notesInRange.indexOf(text) === index);
+  return deduped.join('; ');
+}
+
 function buildPeriodSpans(entries: Entry[]): { spans: PeriodSpan[]; warnings: string[] } {
   const explicit: PeriodSpan[] = [];
   const explicitStarts = new Set<string>();
@@ -162,12 +172,14 @@ function buildPeriodSpans(entries: Entry[]): { spans: PeriodSpan[]; warnings: st
     .map((group) => {
       const first = group[0];
       const last = group[group.length - 1];
+      const startDate = first?.date ?? '';
+      const endDate = last?.date ?? first?.date ?? '';
       return {
-        startDate: first?.date ?? '',
-        endDate: last?.date ?? first?.date ?? '',
+        startDate,
+        endDate,
         open: false,
         endDateConfidence: 'inferred',
-        summary: ''
+        summary: startDate ? collectLegacySummary(leftover, startDate, endDate) : ''
       } satisfies PeriodSpan;
     })
     .filter((period) => period.startDate && !explicitStarts.has(period.startDate));

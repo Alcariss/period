@@ -303,5 +303,43 @@ describe('listPeriodSpans', () => {
       }
     ]);
   });
+
+  it('gathers notes from every day within a legacy period into its summary', () => {
+    const entries: Entry[] = [
+      { ...entry('2026-06-01', '2'), notes: 'cramping started' },
+      { ...entry('2026-06-02', '2'), notes: '' },
+      { ...entry('2026-06-03', '2'), notes: 'heavier today' }
+    ];
+
+    const spans = listPeriodSpans(entries);
+    expect(spans).toEqual([
+      {
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+        open: false,
+        endDateConfidence: 'inferred',
+        summary: 'cramping started; heavier today'
+      }
+    ]);
+  });
+
+  it('deduplicates identical repeated notes within a legacy period', () => {
+    const entries: Entry[] = [
+      { ...entry('2026-06-01', '2'), notes: 'tired' },
+      { ...entry('2026-06-02', '2'), notes: 'tired' }
+    ];
+
+    expect(listPeriodSpans(entries)[0]?.summary).toBe('tired');
+  });
+
+  it('keeps legacy period summaries scoped to that period only', () => {
+    const entries: Entry[] = [
+      { ...entry('2026-06-01', '2'), notes: 'first period note' },
+      { ...entry('2026-06-29', '2'), notes: 'second period note' }
+    ];
+
+    const spans = listPeriodSpans(entries);
+    expect(spans.map((span) => span.summary)).toEqual(['first period note', 'second period note']);
+  });
 });
 
