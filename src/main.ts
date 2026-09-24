@@ -4,11 +4,12 @@ import { deleteEntry, fetchEntries, saveEntry } from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/format';
 import { normalizeEntry } from './lib/entry-normalizer';
-import { getCyclePhase, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod, summarizeEventsByPhase } from './lib/cycle-predictor';
-import type { EventPhaseSummary } from './lib/cycle-predictor';
+import { getCyclePhase, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod, summarizeEventsByPhase, summarizeEventsByMoonPhase } from './lib/cycle-predictor';
+import type { EventMoonSummary, EventPhaseSummary } from './lib/cycle-predictor';
 import { findOpenPeriod, isPeriodRecord, rangesOverlap, toPeriodEntry } from './lib/period-records';
 import { CYCLE_EVENT_TYPES, hasEvent, toggleEvent } from './lib/cycle-events';
 import type { CycleEventType } from './lib/cycle-events';
+import { computeMoonPhase, moonPhaseMeta } from './lib/moon-phase';
 import type { CyclePhaseName } from './lib/cycle-types';
 import type { PeriodSpan } from './lib/cycle-types';
 import type { Diagnostics, Entry, NewEntry } from './types';
@@ -536,7 +537,7 @@ const PHASE_DISPLAY_ORDER: readonly CyclePhaseName[] = [
   'luteal'
 ];
 
-function renderEventSummary(summary: EventPhaseSummary): string {
+function renderEventSummary(summary: EventPhaseSummary, moonSummary?: EventMoonSummary): string {
   const meta = CYCLE_EVENT_TYPES.find((item) => item.id === summary.eventType);
   const label = meta ? `${meta.emoji} ${escapeHtml(meta.label)}` : escapeHtml(summary.eventType);
   const maxCount = Math.max(
@@ -563,6 +564,14 @@ function renderEventSummary(summary: EventPhaseSummary): string {
     ? `Most often during <strong>${escapeHtml(topLabel)}</strong>`
     : 'No clear pattern yet';
 
+  const moonLine = moonSummary && moonSummary.topMoonPhase
+    ? (() => {
+        const moonMeta = moonPhaseMeta(moonSummary.topMoonPhase);
+        return `<p class="event-moon-line">${moonMeta.emoji} Most on `
+          + `<strong>${escapeHtml(moonMeta.label)}</strong> (${moonSummary.topCount})</p>`;
+      })()
+    : '';
+
   return `
     <article class="event-summary">
       <div class="event-summary-header">
@@ -570,6 +579,7 @@ function renderEventSummary(summary: EventPhaseSummary): string {
         <span class="event-summary-total">${summary.total} logged</span>
       </div>
       <p class="event-summary-headline">${headline}</p>
+      ${moonLine}
       <div class="event-phase-rows">${rows}</div>
     </article>
   `;
@@ -584,11 +594,16 @@ function renderEventAnalytics(entries: Entry[]): void {
     return;
   }
 
+  const moonSummaries = summarizeEventsByMoonPhase(entries);
+  const moonByType = new Map(moonSummaries.map((summary) => [summary.eventType, summary]));
+
   eventAnalyticsNode.classList.remove('hidden');
   eventAnalyticsNode.innerHTML = `
     <h3>Events by cycle phase</h3>
-    <p class="event-analytics-sub">Which phase you were in when each event happened.</p>
-    <div class="event-summary-list">${summaries.map(renderEventSummary).join('')}</div>
+    <p class="event-analytics-sub">Which cycle and moon phase you were in when each event happened.</p>
+    <div class="event-summary-list">${summaries
+      .map((summary) => renderEventSummary(summary, moonByType.get(summary.eventType)))
+      .join('')}</div>
   `;
 }
 
@@ -616,10 +631,14 @@ function renderPrediction(entries: Entry[]): void {
     ? '<p class="prediction-warning">Cycle length varies by 8+ days, so this prediction is less reliable.</p>'
     : '';
 
+  const moon = computeMoonPhase(now);
+  const moonChip = `<span class="moon-chip" title="Moon phase in Prague">`
+    + `${moon.emoji} ${escapeHtml(moon.label)}</span>`;
+
   const phaseBlock = phaseInfo
     ? `
       <div class="phase-block">
-        <p class="phase-label">${escapeHtml(PHASE_LABELS[phaseInfo.phase] ?? phaseInfo.phase)} (cycle day ${phaseInfo.cycleDay})</p>
+        <p class="phase-label">${escapeHtml(PHASE_LABELS[phaseInfo.phase] ?? phaseInfo.phase)} (cycle day ${phaseInfo.cycleDay}) ${moonChip}</p>
         <p class="phase-hormones">${escapeHtml(phaseInfo.hormonalState)}</p>
         <ul class="phase-experiences">
           ${phaseInfo.commonExperiences.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}

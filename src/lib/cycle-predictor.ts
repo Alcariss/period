@@ -3,6 +3,8 @@ import type { CyclePhaseInfo, CyclePhaseName, CycleStats, PeriodPrediction, Peri
 import { parsePeriodNotes, rangesOverlap } from './period-records';
 import { CYCLE_EVENT_TYPES, parseEvents } from './cycle-events';
 import type { CycleEventType } from './cycle-events';
+import { MOON_PHASES, computeMoonPhase } from './moon-phase';
+import type { MoonPhaseName } from './moon-phase';
 
 const SAME_PERIOD_MAX_GAP_DAYS = 7;
 const DEFAULT_PERIOD_LENGTH_DAYS = 5;
@@ -408,5 +410,58 @@ export function summarizeEventsByPhase(entries: Entry[]): EventPhaseSummary[] {
     }
 
     return { eventType: meta.id, total, countsByPhase, topPhase };
+  });
+}
+
+export type EventMoonSummary = {
+  eventType: CycleEventType;
+  total: number;
+  topMoonPhase: MoonPhaseName | null;
+  topCount: number;
+};
+
+function moonPhaseForDate(date: string): MoonPhaseName {
+  return computeMoonPhase(new Date(`${date}T12:00:00`)).phase;
+}
+
+export function summarizeEventsByMoonPhase(entries: Entry[]): EventMoonSummary[] {
+  const countsByType = new Map<CycleEventType, Map<MoonPhaseName, number>>();
+  CYCLE_EVENT_TYPES.forEach((meta) => countsByType.set(meta.id, new Map()));
+
+  for (const entry of entries) {
+    if (!entry.date) {
+      continue;
+    }
+
+    const events = parseEvents(entry.events);
+    if (events.length === 0) {
+      continue;
+    }
+
+    const moonPhase = moonPhaseForDate(entry.date);
+    for (const eventType of events) {
+      const counts = countsByType.get(eventType);
+      if (counts) {
+        counts.set(moonPhase, (counts.get(moonPhase) ?? 0) + 1);
+      }
+    }
+  }
+
+  return CYCLE_EVENT_TYPES.map((meta) => {
+    const counts = countsByType.get(meta.id) ?? new Map<MoonPhaseName, number>();
+    let total = 0;
+    let topMoonPhase: MoonPhaseName | null = null;
+    let topCount = 0;
+
+    for (const moonMeta of MOON_PHASES) {
+      const count = counts.get(moonMeta.id) ?? 0;
+      total += count;
+      if (count > topCount) {
+        topCount = count;
+        topMoonPhase = moonMeta.id;
+      }
+    }
+
+    return { eventType: meta.id, total, topMoonPhase, topCount };
   });
 }
