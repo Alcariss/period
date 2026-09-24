@@ -9,6 +9,7 @@ export type Entry = {
   periodStart: string;
   periodEnd: string;
   periodNotes: string;
+  events: string;
 };
 
 export type ApiMeta = {
@@ -44,6 +45,7 @@ export type NewEntry = {
   periodStart?: string;
   periodEnd?: string;
   periodNotes?: string;
+  events?: string;
 };
 
 export type Diagnostics = {

@@ -22,7 +22,8 @@ function entry(date: string, notes = ''): Entry {
     notes,
     periodStart: '',
     periodEnd: '',
-    periodNotes: ''
+    periodNotes: '',
+    events: ''
   };
 }
 

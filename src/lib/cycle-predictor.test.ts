@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assignPeriodGroups, getCyclePhase, computeCycleStats, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod } from './cycle-predictor';
+import { assignPeriodGroups, getCyclePhase, computeCycleStats, getPeriodSpanWarnings, getPhaseForDate, listPeriodSpans, predictNextPeriod, summarizeEventsByPhase } from './cycle-predictor';
 import type { Entry } from '../types';
 
 function entry(date: string, krvaceni = '0'): Entry {
@@ -14,7 +14,8 @@ function entry(date: string, krvaceni = '0'): Entry {
     notes: '',
     periodStart: '',
     periodEnd: '',
-    periodNotes: ''
+    periodNotes: '',
+    events: ''
   };
 }
 
@@ -154,6 +155,58 @@ describe('getCyclePhase', () => {
   it('keeps classifying as luteal when a period is overdue rather than wrapping to a new cycle', () => {
     const phase = getCyclePhase(entries, new Date('2026-08-05'));
     expect(phase?.phase).toBe('luteal');
+  });
+});
+
+function eventEntry(date: string, events: string): Entry {
+  return { ...entry(date, '0'), events };
+}
+
+describe('getPhaseForDate', () => {
+  const entries = [
+    ...periodEntries('2026-06-01', 5),
+    ...periodEntries('2026-06-29', 5)
+  ];
+
+  it('returns null for a date before any logged period', () => {
+    expect(getPhaseForDate(entries, '2026-05-01')).toBeNull();
+  });
+
+  it('classifies a historical date against the period it belongs to', () => {
+    expect(getPhaseForDate(entries, '2026-06-30')?.phase).toBe('menstrual');
+    expect(getPhaseForDate(entries, '2026-07-06')?.phase).toBe('follicular');
+    expect(getPhaseForDate(entries, '2026-07-13')?.phase).toBe('ovulation');
+    expect(getPhaseForDate(entries, '2026-07-20')?.phase).toBe('luteal');
+  });
+});
+
+describe('summarizeEventsByPhase', () => {
+  const entries = [
+    ...periodEntries('2026-06-01', 5),
+    ...periodEntries('2026-06-29', 5),
+    eventEntry('2026-07-06', 'fight'),
+    eventEntry('2026-07-08', 'fight'),
+    eventEntry('2026-06-30', 'sex')
+  ];
+
+  it('counts each event by the cycle phase it fell in', () => {
+    const summaries = summarizeEventsByPhase(entries);
+    const fight = summaries.find((summary) => summary.eventType === 'fight');
+    const sex = summaries.find((summary) => summary.eventType === 'sex');
+
+    expect(fight?.total).toBe(2);
+    expect(fight?.countsByPhase.follicular).toBe(2);
+    expect(fight?.topPhase).toBe('follicular');
+
+    expect(sex?.total).toBe(1);
+    expect(sex?.countsByPhase.menstrual).toBe(1);
+    expect(sex?.topPhase).toBe('menstrual');
+  });
+
+  it('reports zero totals and a null top phase when nothing is logged', () => {
+    const summaries = summarizeEventsByPhase(periodEntries('2026-06-01', 5));
+    expect(summaries.every((summary) => summary.total === 0)).toBe(true);
+    expect(summaries.every((summary) => summary.topPhase === null)).toBe(true);
   });
 });
 

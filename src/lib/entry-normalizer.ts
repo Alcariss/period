@@ -1,4 +1,5 @@
 import type { Entry, NewEntry } from '../types';
+import { parseEvents, serializeEvents } from './cycle-events';
 
 const DEFAULT_SYMPTOM = '0';
 
@@ -75,6 +76,7 @@ export function normalizeEntry(rawEntry: Partial<NewEntry>): Entry {
     notes: typeof rawEntry.notes === 'string' ? rawEntry.notes.trim() : '',
     periodStart: rawEntry.periodStart ? normalizeDate(rawEntry.periodStart) : '',
     periodEnd: rawEntry.periodEnd ? normalizeDate(rawEntry.periodEnd) : '',
-    periodNotes: typeof rawEntry.periodNotes === 'string' ? rawEntry.periodNotes.trim() : ''
+    periodNotes: typeof rawEntry.periodNotes === 'string' ? rawEntry.periodNotes.trim() : '',
+    events: serializeEvents(parseEvents(String(rawEntry.events ?? '')))
   };
 }

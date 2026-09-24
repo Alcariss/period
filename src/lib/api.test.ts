@@ -30,7 +30,8 @@ describe('fetchEntries', () => {
           notes: '',
           periodStart: '',
           periodEnd: '',
-          periodNotes: ''
+          periodNotes: '',
+          events: ''
         }
       ],
       meta: {

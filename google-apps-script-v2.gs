@@ -13,7 +13,7 @@ const FETCH_ERROR_CODES = {
 
 const CANONICAL_COLUMN_ORDER = [
   'date', 'krvaceni', 'nalady', 'tlak', 'nadymani', 'energie', 'notes',
-  'period_start', 'period_end', 'period_notes'
+  'period_start', 'period_end', 'period_notes', 'events'
 ];
 
 const SYMPTOM_LIMITS = {
@@ -136,7 +136,8 @@ function handleSave(params) {
     notes: String(params.notes || '').substring(0, 1000),
     periodStart: String(params.periodStart || '').substring(0, 10),
     periodEnd: String(params.periodEnd || '').substring(0, 10),
-    periodNotes: String(params.periodNotes || '').substring(0, 1000)
+    periodNotes: String(params.periodNotes || '').substring(0, 1000),
+    events: String(params.events || '').substring(0, 200)
   };
 
   try {
@@ -168,7 +169,8 @@ function handleSave(params) {
       entry.notes,
       entry.periodStart,
       entry.periodEnd,
-      entry.periodNotes
+      entry.periodNotes,
+      entry.events
     ];
 
     if (foundRow > 0) {
@@ -373,7 +375,8 @@ function mapRow(columnMap, row) {
     notes: row[columnMap.notes] ? String(row[columnMap.notes]) : '',
     periodStart: row[columnMap.period_start] ? formatDateToISO(row[columnMap.period_start]) : '',
     periodEnd: row[columnMap.period_end] ? formatDateToISO(row[columnMap.period_end]) : '',
-    periodNotes: row[columnMap.period_notes] ? String(row[columnMap.period_notes]) : ''
+    periodNotes: row[columnMap.period_notes] ? String(row[columnMap.period_notes]) : '',
+    events: row[columnMap.events] ? String(row[columnMap.events]) : ''
   };
 }
 

@@ -18,7 +18,8 @@ function toEntries(rows: Entry[]): Entry[] {
     notes: row.notes,
     periodStart: row.periodStart ?? '',
     periodEnd: row.periodEnd ?? '',
-    periodNotes: row.periodNotes ?? ''
+    periodNotes: row.periodNotes ?? '',
+    events: row.events ?? ''
   }));
 }
 
@@ -103,6 +104,7 @@ export async function saveEntry(input: NewEntry): Promise<Entry> {
   url.searchParams.set('periodStart', input.periodStart ?? '');
   url.searchParams.set('periodEnd', input.periodEnd ?? '');
   url.searchParams.set('periodNotes', input.periodNotes ?? '');
+  url.searchParams.set('events', input.events ?? '');
   appendToken(url);
 
   const response = await fetch(url.toString(), {

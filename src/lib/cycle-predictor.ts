@@ -1,6 +1,8 @@
 import type { Entry } from '../types';
 import type { CyclePhaseInfo, CyclePhaseName, CycleStats, PeriodPrediction, PeriodSpan } from './cycle-types';
 import { parsePeriodNotes, rangesOverlap } from './period-records';
+import { CYCLE_EVENT_TYPES, parseEvents } from './cycle-events';
+import type { CycleEventType } from './cycle-events';
 
 const SAME_PERIOD_MAX_GAP_DAYS = 7;
 const DEFAULT_PERIOD_LENGTH_DAYS = 5;
@@ -8,6 +10,8 @@ const LUTEAL_PHASE_DAYS = 14;
 const OVULATION_WINDOW_DAYS = 2;
 const IRREGULAR_VARIATION_THRESHOLD_DAYS = 8;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const PHASE_ORDER: readonly CyclePhaseName[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
 
 const PHASE_CONTENT: Record<CyclePhaseName, { hormonalState: string; commonExperiences: string[] }> = {
   menstrual: {
@@ -206,6 +210,25 @@ function spanLengthDays(period: PeriodSpan, referenceDate: Date): number {
   return length > 0 ? length : DEFAULT_PERIOD_LENGTH_DAYS;
 }
 
+function classifyPhase(
+  cycleDay: number,
+  periodLengthDays: number,
+  averageCycleLengthDays: number
+): CyclePhaseName {
+  const ovulationDay = Math.max(periodLengthDays + 1, averageCycleLengthDays - LUTEAL_PHASE_DAYS);
+
+  if (cycleDay <= periodLengthDays) {
+    return 'menstrual';
+  }
+  if (cycleDay < ovulationDay) {
+    return 'follicular';
+  }
+  if (cycleDay <= ovulationDay + OVULATION_WINDOW_DAYS - 1) {
+    return 'ovulation';
+  }
+  return 'luteal';
+}
+
 export function assignPeriodGroups(entries: Entry[]): Record<string, number> {
   const periods = groupIntoPeriods(entries);
   const groupByDate: Record<string, number> = {};
@@ -293,25 +316,97 @@ export function getCyclePhase(entries: Entry[], referenceDate: Date): CyclePhase
   const lastPeriodLengthDays = spanLengthDays(lastPeriod, referenceDate);
 
   const cycleDay = daysBetween(spanStart(lastPeriod), referenceDate) + 1;
-  const ovulationDay = Math.max(
-    lastPeriodLengthDays + 1,
-    averageCycleLengthDays - LUTEAL_PHASE_DAYS
-  );
-
-  let phase: CyclePhaseName;
-  if (cycleDay <= lastPeriodLengthDays) {
-    phase = 'menstrual';
-  } else if (cycleDay < ovulationDay) {
-    phase = 'follicular';
-  } else if (cycleDay <= ovulationDay + OVULATION_WINDOW_DAYS - 1) {
-    phase = 'ovulation';
-  } else {
-    phase = 'luteal';
-  }
+  const phase = classifyPhase(cycleDay, lastPeriodLengthDays, averageCycleLengthDays);
 
   return {
     phase,
     cycleDay,
     ...PHASE_CONTENT[phase]
   };
+}
+
+export function getPhaseForDate(entries: Entry[], date: string): CyclePhaseInfo | null {
+  const periods = listPeriodSpans(entries);
+  if (periods.length === 0) {
+    return null;
+  }
+
+  const target = toDate(date);
+  let owningPeriod: PeriodSpan | null = null;
+  for (const period of periods) {
+    if (spanStart(period).getTime() <= target.getTime()) {
+      owningPeriod = period;
+    } else {
+      break;
+    }
+  }
+
+  if (!owningPeriod) {
+    return null;
+  }
+
+  const stats = computeCycleStats(entries);
+  const averageCycleLengthDays = stats?.averageCycleLengthDays ?? 28;
+  const periodLengthDays = spanLengthDays(owningPeriod, target);
+  const cycleDay = daysBetween(spanStart(owningPeriod), target) + 1;
+  const phase = classifyPhase(cycleDay, periodLengthDays, averageCycleLengthDays);
+
+  return {
+    phase,
+    cycleDay,
+    ...PHASE_CONTENT[phase]
+  };
+}
+
+export type EventPhaseSummary = {
+  eventType: CycleEventType;
+  total: number;
+  countsByPhase: Record<CyclePhaseName, number>;
+  topPhase: CyclePhaseName | null;
+};
+
+function emptyPhaseCounts(): Record<CyclePhaseName, number> {
+  return { menstrual: 0, follicular: 0, ovulation: 0, luteal: 0 };
+}
+
+export function summarizeEventsByPhase(entries: Entry[]): EventPhaseSummary[] {
+  const countsByType = new Map<CycleEventType, Record<CyclePhaseName, number>>();
+  CYCLE_EVENT_TYPES.forEach((meta) => countsByType.set(meta.id, emptyPhaseCounts()));
+
+  for (const entry of entries) {
+    const events = parseEvents(entry.events);
+    if (events.length === 0) {
+      continue;
+    }
+
+    const phaseInfo = getPhaseForDate(entries, entry.date);
+    if (!phaseInfo) {
+      continue;
+    }
+
+    for (const eventType of events) {
+      const counts = countsByType.get(eventType);
+      if (counts) {
+        counts[phaseInfo.phase] += 1;
+      }
+    }
+  }
+
+  return CYCLE_EVENT_TYPES.map((meta) => {
+    const countsByPhase = countsByType.get(meta.id) ?? emptyPhaseCounts();
+    let total = 0;
+    let topPhase: CyclePhaseName | null = null;
+    let topCount = 0;
+
+    for (const phase of PHASE_ORDER) {
+      const count = countsByPhase[phase];
+      total += count;
+      if (count > topCount) {
+        topCount = count;
+        topPhase = phase;
+      }
+    }
+
+    return { eventType: meta.id, total, countsByPhase, topPhase };
+  });
 }

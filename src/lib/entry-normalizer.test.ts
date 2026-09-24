@@ -29,7 +29,8 @@ describe('entry normalizer', () => {
       notes: 'tired',
       periodStart: '',
       periodEnd: '',
-      periodNotes: ''
+      periodNotes: '',
+      events: ''
     });
   });
 

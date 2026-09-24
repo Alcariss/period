@@ -4,10 +4,14 @@ import { deleteEntry, fetchEntries, saveEntry } from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/format';
 import { normalizeEntry } from './lib/entry-normalizer';
-import { getCyclePhase, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod } from './lib/cycle-predictor';
+import { getCyclePhase, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod, summarizeEventsByPhase } from './lib/cycle-predictor';
+import type { EventPhaseSummary } from './lib/cycle-predictor';
 import { findOpenPeriod, isPeriodRecord, rangesOverlap, toPeriodEntry } from './lib/period-records';
+import { CYCLE_EVENT_TYPES, hasEvent, toggleEvent } from './lib/cycle-events';
+import type { CycleEventType } from './lib/cycle-events';
+import type { CyclePhaseName } from './lib/cycle-types';
 import type { PeriodSpan } from './lib/cycle-types';
-import type { Diagnostics, Entry } from './types';
+import type { Diagnostics, Entry, NewEntry } from './types';
 
 const PERIOD_START_PHRASES = [
   'Be gentle with yourself these next few days. 💕',
@@ -68,9 +72,14 @@ app.innerHTML = `
         How did this period feel? (optional)
         <textarea id="period-notes" maxlength="200" rows="2"></textarea>
       </label>
+      <div class="event-log">
+        <p class="event-log-label">Log an event for this date</p>
+        <div id="event-actions" class="event-actions"></div>
+      </div>
       <p id="add-error" class="form-error hidden"></p>
     </section>
 
+    <section id="event-analytics" class="prediction-card event-analytics hidden"></section>
     <section id="data-warnings" class="data-warnings hidden"></section>
     <section id="status"></section>
     <section id="entries"></section>
@@ -89,6 +98,8 @@ const startButton = requiredNode<HTMLButtonElement>('#start-period');
 const endButton = requiredNode<HTMLButtonElement>('#end-period');
 const periodNotesField = requiredNode<HTMLElement>('#period-notes-field');
 const periodNotesInput = requiredNode<HTMLTextAreaElement>('#period-notes');
+const eventActions = requiredNode<HTMLElement>('#event-actions');
+const eventAnalyticsNode = requiredNode<HTMLElement>('#event-analytics');
 const addError = requiredNode<HTMLElement>('#add-error');
 
 actionDate.value = todayLocalIsoDate();
@@ -179,6 +190,72 @@ function updateActionPanel(entries: Entry[]): void {
     periodNotesInput.value = '';
   }
 }
+
+function entryForDate(date: string): Entry | undefined {
+  return latestEntries.find((entry) => entry.date === date);
+}
+
+function isEmptyEntry(entry: Entry): boolean {
+  return entry.krvaceni === '0'
+    && entry.nalady === ''
+    && entry.tlak === ''
+    && entry.nadymani === ''
+    && entry.energie === ''
+    && entry.notes === ''
+    && entry.periodStart === ''
+    && entry.periodEnd === ''
+    && entry.periodNotes === ''
+    && entry.events === '';
+}
+
+function renderEventToggles(): void {
+  const date = actionDate.value;
+  const currentEvents = date ? (entryForDate(date)?.events ?? '') : '';
+
+  eventActions.innerHTML = CYCLE_EVENT_TYPES.map((meta) => {
+    const active = hasEvent(currentEvents, meta.id);
+    const activeClass = active ? ' active' : '';
+    return `<button type="button" class="event-toggle${activeClass}" data-event="${meta.id}"`
+      + ` aria-pressed="${active}">${meta.emoji} ${escapeHtml(meta.label)}</button>`;
+  }).join('');
+
+  eventActions.querySelectorAll<HTMLButtonElement>('.event-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const type = button.dataset.event as CycleEventType | undefined;
+      if (type) {
+        void toggleEventForDate(type);
+      }
+    });
+  });
+}
+
+async function toggleEventForDate(type: CycleEventType): Promise<void> {
+  clearFormError();
+  const date = actionDate.value;
+  if (!date) {
+    showFormError('A valid date is required.');
+    return;
+  }
+
+  const existing = entryForDate(date);
+  const nextEvents = toggleEvent(existing?.events ?? '', type);
+  const base: NewEntry = existing ? { ...existing } : { date };
+  const merged = normalizeEntry({ ...base, date, events: nextEvents });
+
+  try {
+    if (isEmptyEntry(merged)) {
+      await deleteEntry(date);
+    } else {
+      await saveEntry(merged);
+    }
+    await refreshEntries();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    setStatus(message, 'error');
+  }
+}
+
+actionDate.addEventListener('change', renderEventToggles);
 
 startButton.addEventListener('click', async () => {
   clearFormError();
@@ -289,6 +366,7 @@ function renderDataWarnings(entries: Entry[]): void {
 function renderPeriods(entries: Entry[]): void {
   latestEntries = entries;
   updateActionPanel(entries);
+  renderEventToggles();
 
   const periods = listPeriodSpans(entries).slice().reverse();
   if (periods.length === 0) {
@@ -451,6 +529,69 @@ const PHASE_LABELS: Record<string, string> = {
   luteal: 'Luteal phase'
 };
 
+const PHASE_DISPLAY_ORDER: readonly CyclePhaseName[] = [
+  'menstrual',
+  'follicular',
+  'ovulation',
+  'luteal'
+];
+
+function renderEventSummary(summary: EventPhaseSummary): string {
+  const meta = CYCLE_EVENT_TYPES.find((item) => item.id === summary.eventType);
+  const label = meta ? `${meta.emoji} ${escapeHtml(meta.label)}` : escapeHtml(summary.eventType);
+  const maxCount = Math.max(
+    ...PHASE_DISPLAY_ORDER.map((phase) => summary.countsByPhase[phase]),
+    1
+  );
+
+  const rows = PHASE_DISPLAY_ORDER.map((phase) => {
+    const count = summary.countsByPhase[phase];
+    const width = Math.round((count / maxCount) * 100);
+    const topClass = phase === summary.topPhase && count > 0 ? ' top' : '';
+    const phaseLabel = PHASE_LABELS[phase] ?? phase;
+    return `
+      <div class="event-phase-row${topClass}">
+        <span class="event-phase-name">${escapeHtml(phaseLabel)}</span>
+        <span class="event-phase-bar"><span class="event-phase-fill" style="width:${width}%"></span></span>
+        <span class="event-phase-count">${count}</span>
+      </div>
+    `;
+  }).join('');
+
+  const topLabel = summary.topPhase ? PHASE_LABELS[summary.topPhase] ?? summary.topPhase : '';
+  const headline = summary.topPhase
+    ? `Most often during <strong>${escapeHtml(topLabel)}</strong>`
+    : 'No clear pattern yet';
+
+  return `
+    <article class="event-summary">
+      <div class="event-summary-header">
+        <span class="event-summary-label">${label}</span>
+        <span class="event-summary-total">${summary.total} logged</span>
+      </div>
+      <p class="event-summary-headline">${headline}</p>
+      <div class="event-phase-rows">${rows}</div>
+    </article>
+  `;
+}
+
+function renderEventAnalytics(entries: Entry[]): void {
+  const summaries = summarizeEventsByPhase(entries).filter((summary) => summary.total > 0);
+
+  if (summaries.length === 0) {
+    eventAnalyticsNode.innerHTML = '';
+    eventAnalyticsNode.classList.add('hidden');
+    return;
+  }
+
+  eventAnalyticsNode.classList.remove('hidden');
+  eventAnalyticsNode.innerHTML = `
+    <h3>Events by cycle phase</h3>
+    <p class="event-analytics-sub">Which phase you were in when each event happened.</p>
+    <div class="event-summary-list">${summaries.map(renderEventSummary).join('')}</div>
+  `;
+}
+
 function renderPrediction(entries: Entry[]): void {
   const now = new Date();
   const prediction = predictNextPeriod(entries, now);
@@ -527,6 +668,7 @@ async function refreshEntries(): Promise<void> {
     saveCache(entries);
     renderPeriods(entries);
     renderPrediction(entries);
+    renderEventAnalytics(entries);
     renderDataWarnings(entries);
     setStatus('Entries loaded.', 'success');
     renderDebug(diagnostics);
@@ -538,6 +680,7 @@ async function refreshEntries(): Promise<void> {
       setStatus('Offline mode. Showing cached entries.', 'error');
       renderPeriods(cached.entries);
       renderPrediction(cached.entries);
+      renderEventAnalytics(cached.entries);
       renderDataWarnings(cached.entries);
       renderDebug({
         endpoint: APP_CONFIG.apiUrlPrimary,
@@ -571,6 +714,7 @@ async function bootstrap(): Promise<void> {
   if (cached && cached.entries.length > 0) {
     renderPeriods(cached.entries);
     renderPrediction(cached.entries);
+    renderEventAnalytics(cached.entries);
     setStatus(`Showing cached data (${cacheAgeText(cached.ageMs)}), refreshing...`, 'info');
     renderDebug({
       endpoint: APP_CONFIG.apiUrlPrimary,
