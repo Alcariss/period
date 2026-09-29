@@ -364,6 +364,7 @@ export type EventPhaseSummary = {
   eventType: CycleEventType;
   total: number;
   countsByPhase: Record<CyclePhaseName, number>;
+  unknownPhase: number;
   topPhase: CyclePhaseName | null;
 };
 
@@ -373,7 +374,11 @@ function emptyPhaseCounts(): Record<CyclePhaseName, number> {
 
 export function summarizeEventsByPhase(entries: Entry[]): EventPhaseSummary[] {
   const countsByType = new Map<CycleEventType, Record<CyclePhaseName, number>>();
-  CYCLE_EVENT_TYPES.forEach((meta) => countsByType.set(meta.id, emptyPhaseCounts()));
+  const unknownByType = new Map<CycleEventType, number>();
+  CYCLE_EVENT_TYPES.forEach((meta) => {
+    countsByType.set(meta.id, emptyPhaseCounts());
+    unknownByType.set(meta.id, 0);
+  });
 
   for (const entry of entries) {
     const events = parseEvents(entry.events);
@@ -382,11 +387,13 @@ export function summarizeEventsByPhase(entries: Entry[]): EventPhaseSummary[] {
     }
 
     const phaseInfo = getPhaseForDate(entries, entry.date);
-    if (!phaseInfo) {
-      continue;
-    }
 
     for (const eventType of events) {
+      if (!phaseInfo) {
+        unknownByType.set(eventType, (unknownByType.get(eventType) ?? 0) + 1);
+        continue;
+      }
+
       const counts = countsByType.get(eventType);
       if (counts) {
         counts[phaseInfo.phase] += 1;
@@ -396,7 +403,8 @@ export function summarizeEventsByPhase(entries: Entry[]): EventPhaseSummary[] {
 
   return CYCLE_EVENT_TYPES.map((meta) => {
     const countsByPhase = countsByType.get(meta.id) ?? emptyPhaseCounts();
-    let total = 0;
+    const unknownPhase = unknownByType.get(meta.id) ?? 0;
+    let total = unknownPhase;
     let topPhase: CyclePhaseName | null = null;
     let topCount = 0;
 
@@ -409,7 +417,7 @@ export function summarizeEventsByPhase(entries: Entry[]): EventPhaseSummary[] {
       }
     }
 
-    return { eventType: meta.id, total, countsByPhase, topPhase };
+    return { eventType: meta.id, total, countsByPhase, unknownPhase, topPhase };
   });
 }
 

@@ -203,6 +203,28 @@ describe('summarizeEventsByPhase', () => {
     expect(sex?.topPhase).toBe('menstrual');
   });
 
+  it('keeps counting events from earlier cycles alongside the current one', () => {
+    const acrossCycles = [
+      ...periodEntries('2026-06-01', 5),
+      eventEntry('2026-06-20', 'fight'),
+      ...periodEntries('2026-06-29', 5),
+      eventEntry('2026-07-18', 'fight')
+    ];
+
+    const fight = summarizeEventsByPhase(acrossCycles).find((summary) => summary.eventType === 'fight');
+    expect(fight?.total).toBe(2);
+    expect(fight?.countsByPhase.luteal).toBe(2);
+  });
+
+  it('still counts events logged before the first recorded period', () => {
+    const withOrphan = [eventEntry('2026-05-20', 'fight'), ...periodEntries('2026-06-01', 5)];
+    const fight = summarizeEventsByPhase(withOrphan).find((summary) => summary.eventType === 'fight');
+
+    expect(fight?.total).toBe(1);
+    expect(fight?.unknownPhase).toBe(1);
+    expect(fight?.topPhase).toBeNull();
+  });
+
   it('reports zero totals and a null top phase when nothing is logged', () => {
     const summaries = summarizeEventsByPhase(periodEntries('2026-06-01', 5));
     expect(summaries.every((summary) => summary.total === 0)).toBe(true);

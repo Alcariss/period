@@ -4,9 +4,11 @@ import type { Entry } from '../types';
 import {
   encodePeriodNotes,
   findOpenPeriod,
+  hasNonPeriodData,
   isPeriodRecord,
   parsePeriodNotes,
   rangesOverlap,
+  toPeriodClearedEntry,
   toPeriodEntry
 } from './period-records';
 import type { PeriodSpan } from './cycle-types';
@@ -43,10 +45,15 @@ describe('period records', () => {
     expect(toPeriodEntry('2026-09-01', null)).toEqual({
       date: '2026-09-01',
       krvaceni: '1',
+      nalady: '',
+      tlak: '',
+      nadymani: '',
+      energie: '',
       notes: '',
       periodStart: '2026-09-01',
       periodEnd: '',
-      periodNotes: ''
+      periodNotes: '',
+      events: ''
     });
   });
 
@@ -54,11 +61,76 @@ describe('period records', () => {
     expect(toPeriodEntry('2026-09-01', '2026-09-05', 'felt lighter this time')).toEqual({
       date: '2026-09-01',
       krvaceni: '1',
+      nalady: '',
+      tlak: '',
+      nadymani: '',
+      energie: '',
       notes: '',
       periodStart: '2026-09-01',
       periodEnd: '2026-09-05',
-      periodNotes: 'felt lighter this time'
+      periodNotes: 'felt lighter this time',
+      events: ''
     });
+  });
+
+  it('keeps events, symptoms, and notes already logged on the period start date', () => {
+    const existing: Entry = {
+      ...entry('2026-09-01', 'rough day'),
+      krvaceni: '3',
+      nalady: '2',
+      events: 'fight,sex'
+    };
+
+    expect(toPeriodEntry('2026-09-01', '2026-09-05', 'summary', existing)).toEqual({
+      date: '2026-09-01',
+      krvaceni: '3',
+      nalady: '2',
+      tlak: '',
+      nadymani: '',
+      energie: '',
+      notes: 'rough day',
+      periodStart: '2026-09-01',
+      periodEnd: '2026-09-05',
+      periodNotes: 'summary',
+      events: 'fight,sex'
+    });
+  });
+
+  it('drops legacy period markers from carried notes', () => {
+    const existing: Entry = { ...entry('2026-09-01', '__period__:open'), events: 'fight' };
+    expect(toPeriodEntry('2026-09-01', null, '', existing).notes).toBe('');
+  });
+
+  it('clears period markers but keeps the rest of the row', () => {
+    const existing: Entry = {
+      ...entry('2026-09-01', '__period__:2026-09-05'),
+      periodStart: '2026-09-01',
+      periodEnd: '2026-09-05',
+      periodNotes: 'summary',
+      events: 'fight'
+    };
+
+    expect(toPeriodClearedEntry(existing)).toEqual({
+      date: '2026-09-01',
+      krvaceni: '0',
+      nalady: '',
+      tlak: '',
+      nadymani: '',
+      energie: '',
+      notes: '',
+      periodStart: '',
+      periodEnd: '',
+      periodNotes: '',
+      events: 'fight'
+    });
+  });
+
+  it('detects rows that still hold data once period markers are gone', () => {
+    const bare: Entry = { ...entry('2026-09-01', '__period__:open'), periodStart: '2026-09-01' };
+    expect(hasNonPeriodData(bare)).toBe(false);
+    expect(hasNonPeriodData({ ...bare, events: 'fight' })).toBe(true);
+    expect(hasNonPeriodData({ ...bare, notes: 'rough day' })).toBe(true);
+    expect(hasNonPeriodData({ ...bare, energie: '2' })).toBe(true);
   });
 
   it('detects period records', () => {

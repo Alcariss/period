@@ -197,6 +197,12 @@ button, input, textarea {
   font-size: 0.85rem;
 }
 
+.event-unknown-line {
+  margin: -4px 0 10px;
+  color: #8a7180;
+  font-size: 0.8rem;
+}
+
 .moon-chip {
   display: inline-block;
   margin-left: 8px;

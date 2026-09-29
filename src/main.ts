@@ -6,7 +6,7 @@ import { cacheAgeText, escapeHtml, formatDate, todayLocalIsoDate } from './lib/f
 import { normalizeEntry } from './lib/entry-normalizer';
 import { getCyclePhase, getPeriodSpanWarnings, listPeriodSpans, predictNextPeriod, summarizeEventsByPhase, summarizeEventsByMoonPhase } from './lib/cycle-predictor';
 import type { EventMoonSummary, EventPhaseSummary } from './lib/cycle-predictor';
-import { findOpenPeriod, isPeriodRecord, rangesOverlap, toPeriodEntry } from './lib/period-records';
+import { findOpenPeriod, hasNonPeriodData, isPeriodRecord, rangesOverlap, toPeriodClearedEntry, toPeriodEntry } from './lib/period-records';
 import { CYCLE_EVENT_TYPES, hasEvent, toggleEvent } from './lib/cycle-events';
 import type { CycleEventType } from './lib/cycle-events';
 import { computeMoonPhase, moonPhaseMeta } from './lib/moon-phase';
@@ -135,27 +135,37 @@ function assertNoOverlap(startDate: string, endDate: string, ignoreStart?: strin
 }
 
 async function persistPeriod(startDate: string, endDate: string | null, summary = ''): Promise<void> {
-  const entry = normalizeEntry(toPeriodEntry(startDate, endDate, summary));
+  const existing = entryForDate(startDate);
+  const entry = normalizeEntry(toPeriodEntry(startDate, endDate, summary, existing));
   if (!entry.date) {
     throw new Error('A valid date is required.');
   }
   await saveEntry(entry);
 }
 
+// Removing a period must never drop unrelated data logged on those dates, so
+// rows that still hold events, notes, or symptoms are cleared instead of deleted.
+async function clearOrDeleteRow(entry: Entry): Promise<void> {
+  if (hasNonPeriodData(entry)) {
+    await saveEntry(normalizeEntry(toPeriodClearedEntry(entry)));
+    return;
+  }
+  await deleteEntry(entry.date);
+}
+
 async function removePeriodRows(period: PeriodSpan): Promise<void> {
   const record = latestEntries.find((entry) => entry.date === period.startDate && isPeriodRecord(entry));
   if (record) {
-    await deleteEntry(period.startDate);
+    await clearOrDeleteRow(record);
     return;
   }
 
   const end = effectiveEnd(period);
-  const dates = latestEntries
-    .filter((entry) => entry.date >= period.startDate && entry.date <= end && Number.parseInt(entry.krvaceni, 10) > 0)
-    .map((entry) => entry.date);
+  const bleedingRows = latestEntries
+    .filter((entry) => entry.date >= period.startDate && entry.date <= end && Number.parseInt(entry.krvaceni, 10) > 0);
 
-  for (const date of dates) {
-    await deleteEntry(date);
+  for (const entry of bleedingRows) {
+    await clearOrDeleteRow(entry);
   }
 }
 
@@ -487,7 +497,10 @@ function renderPeriods(entries: Entry[]): void {
         if (original) {
           await removePeriodRows(original);
         } else {
-          await deleteEntry(originalStart);
+          const originalEntry = entryForDate(originalStart);
+          if (originalEntry) {
+            await clearOrDeleteRow(originalEntry);
+          }
         }
         await persistPeriod(nextStart, nextEnd, nextSummary);
         await refreshEntries();
@@ -564,6 +577,11 @@ function renderEventSummary(summary: EventPhaseSummary, moonSummary?: EventMoonS
     ? `Most often during <strong>${escapeHtml(topLabel)}</strong>`
     : 'No clear pattern yet';
 
+  const unknownLine = summary.unknownPhase > 0
+    ? `<p class="event-unknown-line">${summary.unknownPhase} logged before your first recorded period,`
+      + ' so no cycle phase is known.</p>'
+    : '';
+
   const moonLine = moonSummary && moonSummary.topMoonPhase
     ? (() => {
         const moonMeta = moonPhaseMeta(moonSummary.topMoonPhase);
@@ -580,6 +598,7 @@ function renderEventSummary(summary: EventPhaseSummary, moonSummary?: EventMoonS
       </div>
       <p class="event-summary-headline">${headline}</p>
       ${moonLine}
+      ${unknownLine}
       <div class="event-phase-rows">${rows}</div>
     </article>
   `;

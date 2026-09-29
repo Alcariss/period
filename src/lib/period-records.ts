@@ -29,15 +29,57 @@ export function isPeriodRecord(entry: Entry): boolean {
   return Boolean(entry.periodStart) || parsePeriodNotes(entry.notes) !== null;
 }
 
-export function toPeriodEntry(startDate: string, endDate: string | null, summary = ''): NewEntry {
+// Period rows share a date with daily logs, so anything already stored on that
+// date (events, symptoms, notes) must survive the period write.
+export function toPeriodEntry(
+  startDate: string,
+  endDate: string | null,
+  summary = '',
+  existing?: Entry
+): NewEntry {
+  const carriedNotes = existing && parsePeriodNotes(existing.notes) === null ? existing.notes : '';
+
   return {
     date: startDate,
-    krvaceni: '1',
-    notes: '',
+    krvaceni: existing && Number.parseInt(existing.krvaceni, 10) > 0 ? existing.krvaceni : '1',
+    nalady: existing?.nalady ?? '',
+    tlak: existing?.tlak ?? '',
+    nadymani: existing?.nadymani ?? '',
+    energie: existing?.energie ?? '',
+    notes: carriedNotes,
     periodStart: startDate,
     periodEnd: endDate ?? '',
-    periodNotes: summary
+    periodNotes: summary,
+    events: existing?.events ?? ''
   };
+}
+
+// Strips the period markers from a row while keeping everything else the user
+// logged on that date.
+export function toPeriodClearedEntry(existing: Entry): NewEntry {
+  const carriedNotes = parsePeriodNotes(existing.notes) === null ? existing.notes : '';
+
+  return {
+    ...existing,
+    krvaceni: '0',
+    notes: carriedNotes,
+    periodStart: '',
+    periodEnd: '',
+    periodNotes: ''
+  };
+}
+
+// True when a row still holds user data once its period markers are removed.
+export function hasNonPeriodData(entry: Entry): boolean {
+  const cleared = toPeriodClearedEntry(entry);
+  return Boolean(
+    cleared.events
+      || cleared.notes
+      || cleared.nalady
+      || cleared.tlak
+      || cleared.nadymani
+      || cleared.energie
+  );
 }
 
 export function findOpenPeriod(periods: PeriodSpan[]): PeriodSpan | null {
