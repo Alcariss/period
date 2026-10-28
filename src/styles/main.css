@@ -766,3 +766,9 @@ button:disabled {
 button:focus-visible { outline: 3px solid #7a3355; outline-offset: 2px; }
 #status:empty, .debug:empty { display: none; }
 @media (max-width: 380px) { .container { padding: 16px 10px 32px; } .calendar-card { padding: 12px; } .calendar-events { font-size: .7rem; } }
+
+
+.insight-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.insight-tabs button { flex: 1; background: #f7e3ec; color: #7a3355; min-height: 44px; }
+.insight-tabs button[aria-selected='true'] { background: #b23368; color: #fff; }
+[role='tabpanel'][hidden] { display: none; }

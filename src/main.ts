@@ -58,6 +58,19 @@ app.innerHTML = `
       <h1>🌸 Period Tracker</h1>
     </header>
 
+    <section class="insights" aria-label="Cycle insights">
+      <div class="insight-tabs" role="tablist" aria-label="Cycle insights">
+        <button type="button" id="prediction-tab" role="tab" aria-selected="true" aria-controls="prediction-panel">Cycle prediction</button>
+        <button type="button" id="statistics-tab" role="tab" aria-selected="false" aria-controls="statistics-panel" tabindex="-1">Statistics</button>
+      </div>
+      <div id="prediction-panel" role="tabpanel" aria-labelledby="prediction-tab">
+        <section id="prediction" class="prediction-card"></section>
+      </div>
+      <div id="statistics-panel" role="tabpanel" aria-labelledby="statistics-tab" hidden>
+        <section id="event-analytics" class="prediction-card event-analytics"></section>
+      </div>
+    </section>
+
     <section id="add-form-section" class="add-form">
       <p id="period-status" class="period-status"></p>
       <label class="date-field">
@@ -91,8 +104,6 @@ app.innerHTML = `
         <div id="entries"></div>
       </div>
     </section>
-    <section id="prediction" class="prediction-card"></section>
-    <section id="event-analytics" class="prediction-card event-analytics hidden"></section>
     <section id="data-warnings" class="data-warnings hidden"></section>
     <section id="status" role="status"></section>
 
@@ -114,6 +125,31 @@ const periodNotesInput = requiredNode<HTMLTextAreaElement>('#period-notes');
 const eventActions = requiredNode<HTMLElement>('#event-actions');
 const eventAnalyticsNode = requiredNode<HTMLElement>('#event-analytics');
 const addError = requiredNode<HTMLElement>('#add-error');
+
+const insightTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.insight-tabs [role="tab"]'));
+function selectInsightTab(selected: HTMLButtonElement): void {
+  for (const tab of insightTabs) {
+    const active = tab === selected;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    requiredNode<HTMLElement>(`#${tab.getAttribute('aria-controls')}`).hidden = !active;
+  }
+}
+insightTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectInsightTab(tab));
+  tab.addEventListener('keydown', (event) => {
+    let next: HTMLButtonElement | undefined;
+    if (event.key === 'ArrowRight') next = insightTabs[(index + 1) % insightTabs.length];
+    if (event.key === 'ArrowLeft') next = insightTabs[(index + insightTabs.length - 1) % insightTabs.length];
+    if (event.key === 'Home') next = insightTabs[0];
+    if (event.key === 'End') next = insightTabs[insightTabs.length - 1];
+    if (next) {
+      event.preventDefault();
+      selectInsightTab(next);
+      next.focus();
+    }
+  });
+});
 
 actionDate.value = todayLocalIsoDate();
 
@@ -680,15 +716,13 @@ function renderEventAnalytics(entries: Entry[]): void {
   const summaries = summarizeEventsByPhase(entries).filter((summary) => summary.total > 0);
 
   if (summaries.length === 0) {
-    eventAnalyticsNode.innerHTML = '';
-    eventAnalyticsNode.classList.add('hidden');
+    eventAnalyticsNode.innerHTML = '<h3>Event statistics</h3><p class="empty">Log a fight or sex event to see statistics.</p>';
     return;
   }
 
   const moonSummaries = summarizeEventsByMoonPhase(entries);
   const moonByType = new Map(moonSummaries.map((summary) => [summary.eventType, summary]));
 
-  eventAnalyticsNode.classList.remove('hidden');
   eventAnalyticsNode.innerHTML = `
     <h3>Events by cycle phase</h3>
     <p class="event-analytics-sub">Which cycle and moon phase you were in when each event happened.</p>
@@ -821,6 +855,8 @@ async function refreshEntries(): Promise<void> {
 
 async function bootstrap(): Promise<void> {
   renderPeriods([]);
+  renderPrediction([]);
+  renderEventAnalytics([]);
   const cached = loadCache();
   if (cached && cached.entries.length > 0) {
     renderPeriods(cached.entries);
