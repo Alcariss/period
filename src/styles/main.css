@@ -741,3 +741,28 @@ button:disabled {
   margin: 8px 0 0;
 }
 
+
+/* Calendar history: one selected date drives both events and the period editor. */
+.calendar-card { background: #fff; border: 1px solid #ecc9d9; border-radius: 18px; padding: 18px; margin-bottom: 18px; }
+.calendar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.calendar-heading h2 { font-size: 1.2rem; margin: 0; text-align: center; }
+.calendar-heading button, .calendar-today { background: #f7e3ec; color: #7a3355; min-height: 44px; }
+.calendar-today { margin: 10px 0; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.calendar-weekday { text-align: center; font-size: .75rem; color: #6b4b5e; padding: 8px 0; }
+.calendar-day { background: transparent; color: #2d1a2a; border: 2px solid transparent; border-radius: 9px; min-width: 0; min-height: 58px; padding: 5px 0; display: flex; flex-direction: column; align-items: center; }
+.calendar-day.in-period { background: #fde3ee; }
+.calendar-day.selected { border-color: #b23368; }
+.calendar-day[aria-current='date'] > span:first-child { text-decoration: underline; text-underline-offset: 3px; font-weight: 700; }
+.calendar-events { font-size: .75rem; min-height: 18px; white-space: nowrap; }
+.calendar-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: .8rem; color: #6b4b5e; }
+.selected-day { border-top: 1px solid #ecc9d9; padding-top: 16px; }
+.selected-day h2 { font-size: 1.1rem; margin: 0; }
+.selected-day > p { color: #6b4b5e; font-size: .85rem; }
+.selected-day .event-actions { margin: 14px 0; }
+.selected-day .entry-card { box-shadow: none; margin-top: 18px; background: #fff7fb; }
+.entry-header { flex-wrap: wrap; }
+.entry-actions, .form-actions { flex-wrap: wrap; gap: 8px; }
+button:focus-visible { outline: 3px solid #7a3355; outline-offset: 2px; }
+#status:empty, .debug:empty { display: none; }
+@media (max-width: 380px) { .container { padding: 16px 10px 32px; } .calendar-card { padding: 12px; } .calendar-events { font-size: .7rem; } }
