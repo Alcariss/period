@@ -1,4 +1,5 @@
 import './styles/main.css';
+import { monthDays, periodOnDate } from './lib/calendar';
 import { APP_CONFIG, UI_CONFIG } from './config';
 import { deleteEntry, fetchEntries, saveEntry } from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
@@ -57,8 +58,6 @@ app.innerHTML = `
       <h1>🌸 Period Tracker</h1>
     </header>
 
-    <section id="prediction" class="prediction-card"></section>
-
     <section id="add-form-section" class="add-form">
       <p id="period-status" class="period-status"></p>
       <label class="date-field">
@@ -73,17 +72,30 @@ app.innerHTML = `
         How did this period feel? (optional)
         <textarea id="period-notes" maxlength="200" rows="2"></textarea>
       </label>
-      <div class="event-log">
-        <p class="event-log-label">Log an event for this date</p>
-        <div id="event-actions" class="event-actions"></div>
-      </div>
       <p id="add-error" class="form-error hidden"></p>
     </section>
 
+    <section class="calendar-card" aria-label="Period and event calendar">
+      <div class="calendar-heading">
+        <button id="previous-month" type="button" aria-label="Previous month">‹</button>
+        <h2 id="calendar-month"></h2>
+        <button id="next-month" type="button" aria-label="Next month">›</button>
+      </div>
+      <button id="calendar-today" class="calendar-today" type="button">Today</button>
+      <div id="calendar-days" class="calendar-grid"></div>
+      <p class="calendar-legend"><span>▰ Period</span><span>🥊 Fight</span><span>❤️ Sex</span></p>
+      <div class="selected-day">
+        <h2 id="selected-date" aria-live="polite"></h2>
+        <p>Tap an event to add or remove it for this date.</p>
+        <div id="event-actions" class="event-actions"></div>
+        <div id="entries"></div>
+      </div>
+    </section>
+    <section id="prediction" class="prediction-card"></section>
     <section id="event-analytics" class="prediction-card event-analytics hidden"></section>
     <section id="data-warnings" class="data-warnings hidden"></section>
-    <section id="status"></section>
-    <section id="entries"></section>
+    <section id="status" role="status"></section>
+
     <section id="debug" class="debug"></section>
   </main>
 `;
@@ -106,6 +118,50 @@ const addError = requiredNode<HTMLElement>('#add-error');
 actionDate.value = todayLocalIsoDate();
 
 let latestEntries: Entry[] = [];
+let visibleMonth = actionDate.value.slice(0, 7);
+let eventWritePending = false;
+const calendarDays = requiredNode<HTMLElement>('#calendar-days');
+
+function selectDate(date: string): void {
+  actionDate.value = date;
+  visibleMonth = date.slice(0, 7);
+  renderPeriods(latestEntries);
+}
+
+function renderCalendar(): void {
+  const [year, month] = visibleMonth.split('-').map(Number);
+  requiredNode<HTMLElement>('#calendar-month').textContent = new Date(year!, month! - 1, 1)
+    .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  requiredNode<HTMLElement>('#selected-date').textContent = new Date(`${actionDate.value}T12:00:00`)
+    .toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const periods = listPeriodSpans(latestEntries);
+  calendarDays.innerHTML = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    .map((day) => `<span class="calendar-weekday">${day}</span>`).join('')
+    + monthDays(visibleMonth).map((date) => {
+      if (!date) return '<span></span>';
+      const period = periodOnDate(periods, date, todayLocalIsoDate());
+      const events = CYCLE_EVENT_TYPES.filter((event) => hasEvent(entryForDate(date)?.events ?? '', event.id));
+      const selected = date === actionDate.value;
+      const description = [formatDate(date), period ? 'Period' : '', ...events.map((event) => event.label)].filter(Boolean).join(', ');
+      return `<button type="button" class="calendar-day${period ? ' in-period' : ''}${selected ? ' selected' : ''}"
+        data-date="${date}" aria-pressed="${selected}" ${date === todayLocalIsoDate() ? 'aria-current="date"' : ''}
+        aria-label="${escapeHtml(description)}"><span>${Number(date.slice(-2))}</span>
+        <span class="calendar-events" aria-hidden="true">${events.map((event) => event.emoji).join('')}</span></button>`;
+    }).join('');
+  calendarDays.querySelectorAll<HTMLButtonElement>('[data-date]').forEach((button) => {
+    button.addEventListener('click', () => selectDate(button.dataset.date!));
+  });
+}
+
+for (const [id, delta] of [['previous-month', -1], ['next-month', 1]] as const) {
+  requiredNode<HTMLButtonElement>(`#${id}`).addEventListener('click', () => {
+    const [year, month] = visibleMonth.split('-').map(Number);
+    const next = new Date(year!, month! - 1 + delta, 1);
+    visibleMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    renderCalendar();
+  });
+}
+requiredNode<HTMLButtonElement>('#calendar-today').addEventListener('click', () => selectDate(todayLocalIsoDate()));
 
 function showFormError(message: string): void {
   addError.textContent = message;
@@ -227,7 +283,7 @@ function renderEventToggles(): void {
     const active = hasEvent(currentEvents, meta.id);
     const activeClass = active ? ' active' : '';
     return `<button type="button" class="event-toggle${activeClass}" data-event="${meta.id}"`
-      + ` aria-pressed="${active}">${meta.emoji} ${escapeHtml(meta.label)}</button>`;
+      + ` aria-pressed="${active}" ${eventWritePending ? 'disabled' : ''}>${meta.emoji} ${escapeHtml(meta.label)}</button>`;
   }).join('');
 
   eventActions.querySelectorAll<HTMLButtonElement>('.event-toggle').forEach((button) => {
@@ -241,6 +297,7 @@ function renderEventToggles(): void {
 }
 
 async function toggleEventForDate(type: CycleEventType): Promise<void> {
+  if (eventWritePending) return;
   clearFormError();
   const date = actionDate.value;
   if (!date) {
@@ -253,6 +310,8 @@ async function toggleEventForDate(type: CycleEventType): Promise<void> {
   const base: NewEntry = existing ? { ...existing } : { date };
   const merged = normalizeEntry({ ...base, date, events: nextEvents });
 
+  eventWritePending = true;
+  renderEventToggles();
   try {
     if (isEmptyEntry(merged)) {
       await deleteEntry(date);
@@ -263,10 +322,15 @@ async function toggleEventForDate(type: CycleEventType): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     setStatus(message, 'error');
+  } finally {
+    eventWritePending = false;
+    renderEventToggles();
   }
 }
 
-actionDate.addEventListener('change', renderEventToggles);
+actionDate.addEventListener('change', () => {
+  if (actionDate.value) selectDate(actionDate.value);
+});
 
 startButton.addEventListener('click', async () => {
   clearFormError();
@@ -378,10 +442,12 @@ function renderPeriods(entries: Entry[]): void {
   latestEntries = entries;
   updateActionPanel(entries);
   renderEventToggles();
+  renderCalendar();
 
-  const periods = listPeriodSpans(entries).slice().reverse();
+  const selectedPeriod = periodOnDate(listPeriodSpans(entries), actionDate.value, todayLocalIsoDate());
+  const periods = selectedPeriod ? [selectedPeriod] : [];
   if (periods.length === 0) {
-    entriesNode.innerHTML = '<p class="empty">No periods yet. Tap Start period to log one.</p>';
+    entriesNode.innerHTML = '<p class="empty">No period logged for this date.</p>';
     return;
   }
 
@@ -398,8 +464,8 @@ function renderPeriods(entries: Entry[]): void {
             <div class="entry-header">
               <strong>${range}</strong>
               <div class="entry-actions">
-                <button type="button" class="edit-btn" data-start="${escapeHtml(period.startDate)}">Edit</button>
-                <button type="button" class="delete-btn" data-start="${escapeHtml(period.startDate)}">Delete</button>
+                <button type="button" class="edit-btn" data-start="${escapeHtml(period.startDate)}">Edit period</button>
+                <button type="button" class="delete-btn" data-start="${escapeHtml(period.startDate)}">Delete period</button>
               </div>
             </div>
             <p class="period-range">${escapeHtml(durationText(period))} ${openBadge}</p>
@@ -411,8 +477,8 @@ function renderPeriods(entries: Entry[]): void {
               <input type="date" class="edit-start" value="${escapeHtml(period.startDate)}" required />
             </label>
             <label>
-              End
-              <input type="date" class="edit-end" value="${escapeHtml(period.endDate ?? '')}" ${period.open ? '' : 'required'} />
+              End (leave empty if still ongoing)
+              <input type="date" class="edit-end" value="${escapeHtml(period.endDate ?? '')}" />
             </label>
             <label>
               How did it feel? (optional)
@@ -493,6 +559,10 @@ function renderPeriods(entries: Entry[]): void {
 
         assertNoOverlap(nextStart, nextEnd ?? nextStart, originalStart);
 
+        if (!nextEnd && listPeriodSpans(latestEntries).some((period) => period.open && period.startDate !== originalStart)) {
+          throw new Error('End the other ongoing period first.');
+        }
+
         const original = listPeriodSpans(latestEntries).find((item) => item.startDate === originalStart);
         if (original) {
           await removePeriodRows(original);
@@ -503,6 +573,8 @@ function renderPeriods(entries: Entry[]): void {
           }
         }
         await persistPeriod(nextStart, nextEnd, nextSummary);
+        actionDate.value = nextStart;
+        visibleMonth = nextStart.slice(0, 7);
         await refreshEntries();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -748,6 +820,7 @@ async function refreshEntries(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  renderPeriods([]);
   const cached = loadCache();
   if (cached && cached.entries.length > 0) {
     renderPeriods(cached.entries);
